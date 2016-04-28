@@ -39,17 +39,25 @@ TEST_CASE("TestPoolPostProcessSimple") {
     );
 }
 
-TEST_CASE("TestPoolPushSimple") {
+TEST_CASE("TestPoolSpawnSimple") {
     concurrent::Pool<> simple(2);
 
     CHECK(simple.Size() == 2);
 
-    simple.Push<int, std::string>(
+    simple.Spawn<int, std::string>(
         [] (int a, std::string& b){
             CHECK(a == 1);
             CHECK(b == "test");
         }, 1, std::string("test")
     );
 
-    CHECK(simple.Size() == 3);
+    simple.Spawn(
+        [&simple] (){
+            while (simple.IsRunning()) {
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+        }
+    );
+
+    CHECK(simple.Size() == 4);
 }

@@ -84,13 +84,20 @@ public:
     }
 
     template <typename ...Args>
-    void Push(const std::function<void (Args...)>& c, Args... args) {
+    void Spawn(const std::function<void (Args...)>& c, Args... args) {
         if (IsRunning() == false) {
             return; //Throw
         }
 
         auto func = std::bind(c, args...);
         _threads.emplace_back(func);
+    }
+
+    void Spawn(const std::function<void ()>& c) {
+        if (IsRunning() == false) {
+            return; //Throw
+        }
+        _threads.emplace_back(c);
     }
 
     template <typename ...Args>
@@ -101,11 +108,21 @@ public:
         _msgQ.Push(ptr);
     }
 
+    void Send(const std::function<void ()>& c) {
+        Task<void>::Ptr ptr(new Task<void>(c));
+        _msgQ.Push(ptr);
+    }
+
     template <typename ...Args>
     void Send(const std::function<R (Args...)>& c, const std::function<void (R)>& t, Args... args) {
         auto fun = std::bind(c, args...);
         Task<R>::Ptr ptr(new Task<R>(fun, t));
 
+        _msgQ.Push(ptr);
+    }
+
+    void Send(const std::function<R ()>& c, const std::function<void (R)>& t) {
+        Task<R>::Ptr ptr(new Task<R>(c, t));
         _msgQ.Push(ptr);
     }
 
