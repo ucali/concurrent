@@ -28,7 +28,7 @@ TEST_CASE("TestPoolSimple") {
 TEST_CASE("TestPoolPostProcessSimple") {
     concurrent::Pool<double> simple;
 
-    simple.Send<double, int, std::string>(
+    simple.Send<int, std::string>(
         [] (auto a, auto b){
             CHECK(a == 1);
             CHECK(b == "test");

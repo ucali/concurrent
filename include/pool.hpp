@@ -101,8 +101,8 @@ public:
         _msgQ.Push(ptr);
     }
 
-    template <typename R, typename ...Args>
-    void Send(const std::function<R (Args...)>& c, const std::function<void (R&&)>& t, Args... args) {
+    template <typename ...Args>
+    void Send(const std::function<R (Args...)>& c, const std::function<void (R)>& t, Args... args) {
         auto fun = std::bind(c, args...);
         Task<R>::Ptr ptr(new Task<R>(fun, t));
 
