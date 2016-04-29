@@ -47,7 +47,8 @@ TEST_CASE("TestQueueOrder") {
     sync.Push(1);
     sync.Push(2);
 
-    CHECK(sync.Pop() == 1);
+    REQUIRE(sync.Pop() == 1);
+    REQUIRE(sync.Pop() == 2);
 }
 
 TEST_CASE("TestQueuePipeline") {
@@ -56,6 +57,16 @@ TEST_CASE("TestQueuePipeline") {
     concurrent::SyncQueue<int> out;
 
     auto& pool = concurrent::DefaultPool<>();
+
+    concurrent::DefaultPool<>().Spawn(
+        [] (){
+            while (concurrent::DefaultPool<>().IsRunning()) {
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+            std::cout << "Shutting down default pool.." << std::endl;
+        }
+    );
+
     pool.Send([&in] {
         std::cout << "TID: " << std::this_thread::get_id() << std::endl;
 
@@ -82,10 +93,10 @@ TEST_CASE("TestQueuePipeline") {
     REQUIRE(out.Pop() == 2);
     REQUIRE(out.Pop() == 3);
     REQUIRE(out.Pop() == 4);
-
     REQUIRE(out.Pop() == 0);
 
     REQUIRE(out.Size() == 0);
 
     std::cout << "MAIN TID: " << std::this_thread::get_id() << std::endl;
+
 }

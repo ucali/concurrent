@@ -80,6 +80,7 @@ TEST_CASE("TestPoolDefault") {
             while (concurrent::DefaultPool<>().IsRunning()) {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
+            std::cout << "Shutting down default pool.." << std::endl;
         }
     );
 
