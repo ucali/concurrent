@@ -6,6 +6,8 @@
 #include <functional>
 #include <future>
 
+#include <iostream>
+
 #include "queue.hpp"
 
 namespace concurrent {
@@ -34,7 +36,7 @@ private:
 };
 
 template<>
-void Task<void>::Exec() { _c(); }
+void Task<void>::Exec() { _c(); _t(); }
 
 template<typename R>
 void Task<R>::Exec() { _t(std::move(_c())); }
@@ -51,10 +53,12 @@ public:
                   size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
     { init(s); }
 
-    virtual ~Pool() { Close(); }
+    ~Pool() { Close(); }
 
     bool IsRunning() const { return _guard.load(); }
     size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _threads.size(); }
+
+	void OnException(const std::function<void(const std::exception&)>& f) { _ee = f; }
 
     template <typename ..._Args>
     void Spawn(const std::function<void (_Args...)>& c, _Args... args) {
@@ -136,12 +140,18 @@ private:
 
         auto func = [this] {
             while (IsRunning()) {
-                auto h = _msgQ.Pop(1000);
-                if (h != nullptr) {
-                    h->Exec();
-                }
+				try {
+					auto h = _msgQ.Pop(1000);
+					if (h != nullptr) {
+						h->Exec();
+					}
+				} catch (const std::exception& e) {
+					_ee(e);
+				}
             }
         };
+
+		_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 
         for (int i = 0; i < s; i++) {
             _threads.emplace_back(func);
@@ -160,6 +170,7 @@ private:
 
     const std::function<R (Args...)> _c;
     const std::function<void (R)> _t;
+	std::function<void(const std::exception&)> _ee;
 };
 
 template <typename R = void>

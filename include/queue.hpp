@@ -12,7 +12,10 @@ namespace concurrent {
 template <typename T>
 class SyncQueue {
 public:
+	typedef std::shared_ptr<SyncQueue> Ptr;
+
     SyncQueue(size_t t = 1 << 16) : _maxSize(t), _closed(false) { }
+	~SyncQueue() { }
 
     T Pop();
     T Pop(uint64_t ms);
