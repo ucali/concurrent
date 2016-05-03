@@ -307,7 +307,7 @@ public:
     _StreamItem(typename I::Ptr i, _Args... a) : Pool<void, _Args...>(a...), _in(i), _out(new O()) {}
 
 	virtual ~_StreamItem() {
-		Close();
+		this->Close();
 		if (_child) { 
 			_child->Close(); 
 		} 
@@ -339,7 +339,7 @@ public:
 	using Bouncer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
 
 	template <typename _I>
-	typename Bouncer<_I> Filter(const std::function<bool (_I)>& fn) { 
+	typename Bouncer<_I>::Ptr Filter(const std::function<bool (_I)>& fn) { 
 		Bouncer<_I>::Ptr item(new Bouncer<_I>(_out));
 		
 		item->Send([item] {
