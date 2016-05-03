@@ -321,7 +321,7 @@ public:
 
     template <typename _I, typename _K, typename _V>
     typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
-		Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out));
+		typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out));
 
         item->Send([this, item, fn] {
             while (item->Input()->CanReceive()) {
@@ -340,7 +340,7 @@ public:
 
 	template <typename _I>
 	typename Bouncer<_I>::Ptr Filter(const std::function<bool (_I)>& fn) { 
-		Bouncer<_I>::Ptr item(new Bouncer<_I>(_out));
+		typename Bouncer<_I>::Ptr item(new Bouncer<_I>(_out));
 		
 		item->Send([item] {
 			while (item->Input()->CanReceive()) {
@@ -363,7 +363,7 @@ public:
 
 	template <typename _K, typename _V, typename _O>
 	typename Reducer<_K, _V, _O>::Ptr Reduce(const std::function<_O(_K, _V)>& fn) {
-		Reducer<_K, _V, _O>::Ptr item(new Reducer<_K, _V, _O>(_out));
+		typename Reducer<_K, _V, _O>::Ptr item(new Reducer<_K, _V, _O>(_out));
 		item->Send([item, fn] {
 			item->Input()->ForEach([item, fn] (const std::pair<_K, _V>& pair) {
 				auto o = fn(pair.first, pair.second);
