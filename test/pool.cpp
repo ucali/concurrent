@@ -15,7 +15,7 @@ TEST_CASE("TestPoolSimple") {
         }, 1, std::string("test")
     );
 
-    simple.Send<std::string, int, double>(
+    simple.Send<std::string, int, double, double>(
         [] (std::string b, int a, double val, double val2){
             if (b == "test") {
             }
