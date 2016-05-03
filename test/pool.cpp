@@ -8,21 +8,22 @@
 TEST_CASE("TestPoolSimple") {
     concurrent::Pool<> simple;
 
-    simple.Send<int, std::string>(
-        [] (int a, std::string b){
-            if (b == "test") {
-            }
-        }, 1, std::string("test")
-    );
+	std::function<void (int, std::string)> fun = [](int a, std::string b) {
+		if (b == "test") {
+		}
+		return;
+	};
 
-    simple.Send<std::string, int, double, double>(
-        [] (std::string b, int a, double val, double val2){
-            if (b == "test") {
-            }
-            val += 0.1;
-            val2 += 0.1;
-        }, std::string("test"), 1, 0.1, 0.1
-    );
+    simple.Send<int, std::string>(fun, 1, std::string("test"));
+
+
+	std::function<void (std::string, int, double, double)> fn2 = [](std::string b, int a, double val, double val2) {
+		if (b == "test") {
+		}
+		val += 0.1;
+		val2 += 0.1;
+	};
+    simple.Send<std::string, int, double, double>(fn2, std::string("test"), 1, 0.1, 0.1);
 }
 
 TEST_CASE("TestPoolSimpleInit") {
@@ -41,14 +42,17 @@ TEST_CASE("TestPoolSimpleInit") {
 TEST_CASE("TestPoolPostProcessSimple") {
     concurrent::Pool<double> simple;
 
-    simple.Send<int, std::string>(
-        [] (auto a, auto b){
-			assert(a == 1);
-			assert(b == "test");
-            return a*2.0f;
-        }, [] (auto a) {
-			assert(a == 2.0f);
-        }, 1, std::string("test")
+	std::function<double (int, std::string)> fun = [](int a, std::string b) {
+		assert(a == 1);
+		assert(b == "test");
+		return a*2.0f;
+	};
+
+	std::function<void (double)> cb = [](double a) {
+		assert(a == 2.0f);
+	};
+
+    simple.Send<int, std::string>(fun, cb, 1, std::string("test")
     );
 }
 
