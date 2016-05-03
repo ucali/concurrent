@@ -63,7 +63,7 @@ public:
 private:
     mutable std::mutex _mutex;
 
-    typename _M _map;
+    _M _map;
 };
 
 }
