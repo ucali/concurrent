@@ -39,8 +39,8 @@ class Task : public _Task<R> {
 public:
     typedef std::shared_ptr<Task<R>> Ptr;
 
-    Task(const std::function<R()>& c, const std::function<void(R)>& t) : _Task(c), _t(t) {}
-    Task(const std::function<R()>& c) : _Task(c) { _t = [] (R) {}; }
+    Task(const std::function<R()>& c, const std::function<void(R)>& t) : _Task<R>(c), _t(t) {}
+    Task(const std::function<R()>& c) : _Task<R>(c) { _t = [] (R) {}; }
 
     virtual void Exec();
 
