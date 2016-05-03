@@ -55,6 +55,11 @@ public:
         return _map.size();
     }
 
+	void ForEach(const std::function<void(const std::pair<_K, _V>&)>& fn) const {
+		std::unique_lock<std::mutex> lock(_mutex);
+		std::for_each(_map.begin(), _map.end(), fn);
+	}
+
 private:
     mutable std::mutex _mutex;
 

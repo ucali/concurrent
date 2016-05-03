@@ -92,27 +92,16 @@ TEST_CASE("TestPoolDefault") {
 TEST_CASE("TestPoolProcessing") {
     using namespace concurrent;
 
-    concurrent::SyncQueue<int>::Ptr list(new concurrent::SyncQueue<int>());
-    concurrent::SyncMap<int, double>::Ptr map(new concurrent::SyncMap<int, double>());
-
-    concurrent::SystemTaskPool<>().Map<int, int, double>(list, map, [] (concurrent::SyncQueue<int>::Ptr, concurrent::SyncMap<int, double>::Ptr) {
-        std::cout << "Map" << std::endl;
-    })->Collect<int, double, int>(map, list, [] ( concurrent::SyncMap<int, double>::Ptr, concurrent::SyncQueue<int>::Ptr) {
-        std::cout << "Collect" << std::endl;
-    })->Collect<int, int>(list, list, [] ( concurrent::SyncQueue<int>::Ptr, concurrent::SyncQueue<int>::Ptr) {
-        std::cout << "Collect" << std::endl;
-    })->Filter<int>(list, list, [] ( concurrent::SyncQueue<int>::Ptr, concurrent::SyncQueue<int>::Ptr) {
-        std::cout << "Filter" << std::endl;
-    });
-
-
-    _StreamItem<typename SyncQueue<int>, typename SyncQueue<int>> item;
-    item.MapStream<int, int, int>([] (int i) {
+	Streamer<int> item;
+    item.Map<int, int, int>([] (int i) {
         std::cout << i << std::endl;
         return std::move(std::pair<int, int>(i, i));
-    });
+    })->Reduce<int, int, int>([](int k, int v) {
+		return k + v;
+	});
 
-    item.Input()->Push(1);
-    item.Input()->Push(2);
-
+	auto input = item.Input();
+	input->Push(1);
+	input->Push(2);
+	input->Close();
 }

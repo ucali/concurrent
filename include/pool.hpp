@@ -56,6 +56,14 @@ void Task<void>::Exec() { _c(); _t(); }
 template<typename R>
 void Task<R>::Exec() { _t(std::move(_c())); }
 
+class _Pool {
+public:
+	typedef std::shared_ptr<_Pool> Ptr;
+	virtual ~_Pool() { }
+
+	virtual void Close() = 0;
+};
+
 }
 
 class WaitGroup {
@@ -96,7 +104,7 @@ private:
 };
 
 template <typename R = void, typename ...Args>
-class Pool {
+class Pool : public _Pool {
 public:
     typedef std::shared_ptr<Pool<R, Args...>> Ptr;
 
@@ -107,7 +115,7 @@ public:
                   size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
     { init(s); }
 
-    ~Pool() { Close(); }
+    virtual ~Pool() { Close(); }
 
     bool IsRunning() const { return _guard.load(); }
     size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _threads.size(); }
@@ -171,7 +179,7 @@ public:
         _msgQ.Push(ptr);
     }
 
-    //PROCESS
+    /*PROCESS
 
     template <typename _I, typename _K, typename _V>
     using Mapper = Pool<void, typename SyncQueue<_I>::Ptr, typename SyncMap<_K, _V>::Ptr>;
@@ -213,10 +221,9 @@ public:
         ListFilter<_I>::Ptr pool(new ListFilter<_I>(op));
         pool->Call<typename SyncQueue<_I>::Ptr, typename SyncQueue<_I>::Ptr>(in, out);
         return pool;
-    }
+    }*/
 
-protected:
-    void Close() {
+    virtual void Close() {
         _guard.store(false);
 
         if (_threads.empty()) {
@@ -279,6 +286,7 @@ inline Pool<R>& SystemTaskPool() {
     return pool;
 }
 
+namespace /*anonimous*/ {
 
 template <typename _I, typename _O, typename ..._Args>
 class _StreamItem : public Pool<void, _Args...> {
@@ -288,28 +296,100 @@ public:
     _StreamItem(_Args... a) : Pool<void, _Args...>(a...), _in(new _O()), _out(_in) {}
     _StreamItem(typename _I::Ptr i, _Args... a) : Pool<void, _Args...>(a...), _in(i), _out(new _O()) {}
 
+	virtual ~_StreamItem() {
+		Close();
+		if (_child) { 
+			_child->Close(); 
+		} 
+	}
+
     typename _I::Ptr Input() { return _in; }
     typename _O::Ptr Output() { return _out; }
 
+	template <typename _I>
+	using Streamer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
+
+	template <typename _I, typename _K, typename _V>
+	using Mapper = _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>;
+
     template <typename _I, typename _K, typename _V>
-    typename _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>::Ptr MapStream(const std::function<std::pair<_K, _V> (_I)>& fn) {
-        _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>::Ptr item(new _StreamItem<_O, typename SyncMap<_K, _V>>(_out));
+    typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
+		Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out));
 
         item->Send([this, item, fn] {
-            while (_out->CanReceive()) {
-                auto ret = fn(_out->Pop());
+            while (item->Input()->CanReceive()) {
+                auto ret = fn(item->Input()->Pop());
                 item->Output()->Insert(ret.first, ret.second);
             }
 
-        });
+        }, 2);
+
+		_child = item;
         return item;
     }
+
+	template <typename _I>
+	using Bouncer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
+
+	template <typename _I>
+	typename Bouncer<_I> Filter(const std::function<bool (_I)>& fn) { 
+		Bouncer<_I>::Ptr item(new Bouncer<_I>(_out));
+		
+		item->Send([item] {
+			while (item->Input()->CanReceive()) {
+				while (item->Input()->CanReceive()) {
+					auto pop = val;
+					auto ret = fn(val);
+					if (ret) {
+						item->Output()->Push(val);
+					}
+				}
+			}
+		}, 2);
+
+		_child = item;
+		return item;
+	}
+
+	template <typename _K, typename _V, typename _O>
+	using Reducer = _StreamItem<typename SyncMap<_K, _V>, typename SyncQueue<_O>>;
+
+	template <typename _K, typename _V, typename _O>
+	typename Reducer<_K, _V, _O>::Ptr Reduce(const std::function<_O(_K, _V)>& fn) {
+		Reducer<_K, _V, _O>::Ptr item(new Reducer<_K, _V, _O>(_out));
+		item->Send([item, fn] {
+			item->Input()->ForEach([item, fn] (const std::pair<_K, _V>& pair) {
+				auto o = fn(pair.first, pair.second);
+				item->Output()->Push(o);
+			});
+		
+		}, 2);
+
+		_child = item;
+		return item;
+	}
+
 
 private:
     typename _I::Ptr _in;
     typename _O::Ptr _out;
 
+	_Pool::Ptr _child;
 };
+
+}
+
+template <typename _I>
+using Streamer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
+
+template <typename _I, typename _K, typename _V>
+using Mapper = _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>;
+
+template <typename _I>
+using Bouncer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
+
+template <typename _K, typename _V, typename _O>
+using Reducer = _StreamItem<typename SyncMap<_K, _V>, typename SyncQueue<_O>>;
 
 }
 

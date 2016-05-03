@@ -90,16 +90,6 @@ TEST_CASE("TestMapPipeline") {
 
     pool.Send([in, out, wg] {
         wg->Wait();
-
-       // REQUIRE(out->Size() == 1000);
-	   //  REQUIRE(out->Get(0) == 0);
-	   //  REQUIRE(out->Get(999) == 999);
-
-	   //  REQUIRE(out->Remove(999));
-	   //  REQUIRE(out->Size() == 999);
-
-        out->Clear();
-		//  REQUIRE_THROWS(out->Get(-1));
     });
 
     for (int i = 0; i < 1000; i++) {
@@ -107,4 +97,9 @@ TEST_CASE("TestMapPipeline") {
     }
     in->Close();
 
+	out->ForEach([](const std::pair<int, int>&) {
+		
+	});
+
+	out->Clear();
 }
