@@ -386,16 +386,16 @@ private:
 }
 
 template <typename _I>
-using Streamer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
+using Streamer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
 
 template <typename _I, typename _K, typename _V>
-using Mapper = _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>;
+using Mapper = _StreamItem<SyncQueue<_I>, SyncMap<_K, _V>>;
 
 template <typename _I>
-using Bouncer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
+using Bouncer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
 
 template <typename _K, typename _V, typename _O>
-using Reducer = _StreamItem<typename SyncMap<_K, _V>, typename SyncQueue<_O>>;
+using Reducer = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
 
 }
 
