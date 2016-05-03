@@ -298,13 +298,13 @@ inline Pool<R>& SystemTaskPool() {
 
 namespace /*anonimous*/ {
 
-template <typename _I, typename _O, typename ..._Args>
+template <typename I, typename O, typename ..._Args>
 class _StreamItem : public Pool<void, _Args...> {
 public:
-    typedef std::shared_ptr<_StreamItem<_I, _O, _Args...>> Ptr;
+    typedef std::shared_ptr<_StreamItem<I, O, _Args...>> Ptr;
 
-    _StreamItem(_Args... a) : Pool<void, _Args...>(a...), _in(new _O()), _out(_in) {}
-    _StreamItem(typename _I::Ptr i, _Args... a) : Pool<void, _Args...>(a...), _in(i), _out(new _O()) {}
+    _StreamItem(_Args... a) : Pool<void, _Args...>(a...), _in(new O()), _out(_in) {}
+    _StreamItem(typename I::Ptr i, _Args... a) : Pool<void, _Args...>(a...), _in(i), _out(new O()) {}
 
 	virtual ~_StreamItem() {
 		Close();
@@ -313,11 +313,11 @@ public:
 		} 
 	}
 
-    typename _I::Ptr Input() { return _in; }
-    typename _O::Ptr Output() { return _out; }
+    typename I::Ptr Input() { return _in; }
+    typename O::Ptr Output() { return _out; }
 
-	template <typename _I>
-	using Streamer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
+	template <typename I>
+	using Streamer = _StreamItem<typename SyncQueue<I>, typename SyncQueue<I>>;
 
 	template <typename _I, typename _K, typename _V>
 	using Mapper = _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>;
@@ -381,8 +381,8 @@ public:
 
 
 private:
-    typename _I::Ptr _in;
-    typename _O::Ptr _out;
+    typename I::Ptr _in;
+    typename O::Ptr _out;
 
 	_Pool::Ptr _child;
 };
