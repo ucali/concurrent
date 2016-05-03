@@ -316,8 +316,8 @@ public:
     typename I::Ptr Input() { return _in; }
     typename O::Ptr Output() { return _out; }
 
-	template <typename I>
-	using Streamer = _StreamItem<typename SyncQueue<I>, typename SyncQueue<I>>;
+	template <typename _I>
+	using Streamer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
 
 	template <typename _I, typename _K, typename _V>
 	using Mapper = _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>;
