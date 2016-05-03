@@ -56,11 +56,11 @@ TEST_CASE("TestQueuePipeline") {
     concurrent::SyncQueue<int> in;
     concurrent::SyncQueue<int> out;
 
-    auto& pool = concurrent::DefaultPool<>();
+    auto& pool = concurrent::SystemTaskPool<>();
 
-    concurrent::DefaultPool<>().Spawn(
+    concurrent::SystemTaskPool<>().Spawn(
         [] (){
-            while (concurrent::DefaultPool<>().IsRunning()) {
+            while (concurrent::SystemTaskPool<>().IsRunning()) {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
             std::cout << "Shutting down default pool.." << std::endl;
@@ -90,10 +90,11 @@ TEST_CASE("TestQueuePipeline") {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     });
 
-    REQUIRE(out.Pop() == 2);
-    REQUIRE(out.Pop() == 3);
-    REQUIRE(out.Pop() == 4);
-    REQUIRE(out.Pop() == 0);
+
+    REQUIRE_NOTHROW(out.Pop());
+    REQUIRE_NOTHROW(out.Pop());
+    REQUIRE_NOTHROW(out.Pop());
+    REQUIRE_THROWS(out.Pop());
 
     REQUIRE(out.Size() == 0);
 

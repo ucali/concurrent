@@ -4,6 +4,8 @@
 #include "queue.hpp"
 #include "pool.hpp"
 
+#include <assert.h>
+
 #include <iostream>
 
 TEST_CASE("TestMap") {
@@ -20,7 +22,6 @@ TEST_CASE("TestMap") {
     map.Clear();
 }
 
-
 TEST_CASE("TestHashMap") {
     concurrent::SyncHashMap<int, int> hash;
     hash.Insert(1, 1);
@@ -35,12 +36,12 @@ TEST_CASE("TestHashMap") {
     hash.Clear();
 }
 
-TEST_CASE("TestMapPipeline") {
+TEST_CASE("TestMapCallback") {
 
     concurrent::SyncQueue<int>::Ptr in(new concurrent::SyncQueue<int>());
     concurrent::SyncMap<int, int>::Ptr out(new concurrent::SyncMap<int, int>());
 
-    auto& pool = concurrent::DefaultPool<>();
+    auto& pool = concurrent::SystemTaskPool<>();
 
     pool.Send([in, out] {
 		while (in->CanReceive()) {
@@ -48,19 +49,62 @@ TEST_CASE("TestMapPipeline") {
 			out->Insert(val, val);
 		}
     }, [out] {
-		REQUIRE(out->Size() == 2);
-		REQUIRE(out->Get(1) == 1);
-		REQUIRE(out->Get(2) == 2);
+		assert(out->Size() == 1000);
+		assert(out->Get(0) == 0);
+		assert(out->Get(999) == 999);
 
-		out->Clear();
-		REQUIRE_THROWS(out->Get(3));
+		assert(out->Remove(999));
+		assert(out->Size() == 999);
 
-		out->Get(3);
+        out->Clear();
     });
 
-    in->Push(1);
-    in->Push(2);
+    for (int i = 0; i < 1000; i++) {
+        in->Push(i);
+    }
     in->Close();
 
 }
 
+TEST_CASE("TestMapPipeline") {
+
+    concurrent::SyncQueue<int>::Ptr in(new concurrent::SyncQueue<int>());
+    concurrent::SyncMap<int, int>::Ptr out(new concurrent::SyncMap<int, int>());
+
+    concurrent::WaitGroup::Ptr wg(new concurrent::WaitGroup(4));
+
+    auto& pool = concurrent::SystemTaskPool<>();
+
+    pool.Send([in, out, wg] {
+		try {
+			while (in->CanReceive()) {
+				auto val = in->Pop();
+				out->Insert(val, val);
+			}
+		} catch (const std::exception& e) { 
+			std::cerr << e.what() << std::endl; 
+		}
+
+        wg->Finish();
+    }, wg->Size());
+
+    pool.Send([in, out, wg] {
+        wg->Wait();
+
+       // REQUIRE(out->Size() == 1000);
+	   //  REQUIRE(out->Get(0) == 0);
+	   //  REQUIRE(out->Get(999) == 999);
+
+	   //  REQUIRE(out->Remove(999));
+	   //  REQUIRE(out->Size() == 999);
+
+        out->Clear();
+		//  REQUIRE_THROWS(out->Get(-1));
+    });
+
+    for (int i = 0; i < 1000; i++) {
+        in->Push(i);
+    }
+    in->Close();
+
+}

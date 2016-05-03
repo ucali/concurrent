@@ -3,21 +3,22 @@
 #include "pool.hpp"
 
 #include <iostream>
+#include <assert.h>
 
 TEST_CASE("TestPoolSimple") {
     concurrent::Pool<> simple;
 
     simple.Send<int, std::string>(
         [] (int a, std::string b){
-			if (b == "test") {
-			}
+            if (b == "test") {
+            }
         }, 1, std::string("test")
     );
 
     simple.Send<std::string, int, double>(
         [] (std::string b, int a, double val, double val2){
-			if (b == "test") {
-			}
+            if (b == "test") {
+            }
             val += 0.1;
             val2 += 0.1;
         }, std::string("test"), 1, 0.1, 0.1
@@ -42,11 +43,11 @@ TEST_CASE("TestPoolPostProcessSimple") {
 
     simple.Send<int, std::string>(
         [] (auto a, auto b){
-			REQUIRE(a == 1);
-			REQUIRE(b == "test");
+			assert(a == 1);
+			assert(b == "test");
             return a*2.0f;
         }, [] (auto a) {
-			REQUIRE(a == 2.0f);
+			assert(a == 2.0f);
         }, 1, std::string("test")
     );
 }
@@ -58,8 +59,8 @@ TEST_CASE("TestPoolSpawnSimple") {
 
     simple.Spawn<int, std::string>(
         [] (int a, std::string& b){
-			REQUIRE(a == 1);
-			REQUIRE(b == "test");
+			assert(a == 1);
+			assert(b == "test");
         }, 1, std::string("test")
     );
 
@@ -75,14 +76,43 @@ TEST_CASE("TestPoolSpawnSimple") {
 }
 
 TEST_CASE("TestPoolDefault") {
-    concurrent::DefaultPool<>().Spawn(
+    concurrent::SystemTaskPool<>().Spawn(
         [] (){
-            while (concurrent::DefaultPool<>().IsRunning()) {
+            while (concurrent::SystemTaskPool<>().IsRunning()) {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
             std::cout << "Shutting down default pool.." << std::endl;
         }
     );
 
-    REQUIRE(concurrent::DefaultPool<>().Size() == 5);
+    REQUIRE(concurrent::SystemTaskPool<>().Size() == 5);
+}
+
+
+TEST_CASE("TestPoolProcessing") {
+    using namespace concurrent;
+
+    concurrent::SyncQueue<int>::Ptr list(new concurrent::SyncQueue<int>());
+    concurrent::SyncMap<int, double>::Ptr map(new concurrent::SyncMap<int, double>());
+
+    concurrent::SystemTaskPool<>().Map<int, int, double>(list, map, [] (concurrent::SyncQueue<int>::Ptr, concurrent::SyncMap<int, double>::Ptr) {
+        std::cout << "Map" << std::endl;
+    })->Collect<int, double, int>(map, list, [] ( concurrent::SyncMap<int, double>::Ptr, concurrent::SyncQueue<int>::Ptr) {
+        std::cout << "Collect" << std::endl;
+    })->Collect<int, int>(list, list, [] ( concurrent::SyncQueue<int>::Ptr, concurrent::SyncQueue<int>::Ptr) {
+        std::cout << "Collect" << std::endl;
+    })->Filter<int>(list, list, [] ( concurrent::SyncQueue<int>::Ptr, concurrent::SyncQueue<int>::Ptr) {
+        std::cout << "Filter" << std::endl;
+    });
+
+
+    _StreamItem<typename SyncQueue<int>, typename SyncQueue<int>> item;
+    item.MapStream<int, int, int>([] (int i) {
+        std::cout << i << std::endl;
+        return std::move(std::pair<int, int>(i, i));
+    });
+
+    item.Input()->Push(1);
+    item.Input()->Push(2);
+
 }

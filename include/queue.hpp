@@ -26,6 +26,8 @@ public:
     void Push(T&&);
     bool Push(T&&, uint64_t ms);
 
+	void WakeAndClose();
+
     inline bool IsEmpty() const {  std::unique_lock<std::mutex> lock(_mutex); return _queue.size() == 0; }
     inline bool IsFull() const { std::unique_lock<std::mutex> lock(_mutex); return _queue.size() == _maxSize; }
     inline size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _queue.size(); }
@@ -67,7 +69,10 @@ T SyncQueue<T>::Pop() {
     {
         std::unique_lock<std::mutex> lock(_mutex);
         while (_queue.size() == 0) {
-            if (_closed) { return T(); }
+            if (_closed) { 
+                _full.notify_all();
+				throw std::logic_error("reading from closed queue."); 
+			}
 
             _empty.wait(lock);
         }
@@ -100,6 +105,17 @@ T SyncQueue<T>::Pop(uint64_t ms) {
 
     _full.notify_all();
     return t;
+}
+
+
+template <typename T>
+void SyncQueue<T>::WakeAndClose() {
+	std::unique_lock<std::mutex> lock(_mutex);
+	if (_closed) { return; }
+
+	_empty.notify_all();
+	_queue.push(T());
+	_closed = true; 
 }
 
 template <typename T>
