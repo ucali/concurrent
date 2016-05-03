@@ -316,15 +316,9 @@ public:
     typename I::Ptr Input() { return _in; }
     typename O::Ptr Output() { return _out; }
 
-	template <typename _I>
-	using Streamer = _StreamItem< typename SyncQueue<_I>, typename SyncQueue<_I> >;
-
-	template <typename _I, typename _K, typename _V>
-	using Mapper = _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>;
-
     template <typename _I, typename _K, typename _V>
-    typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
-		Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out));
+    typename _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
+		_StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>::Ptr item(new _StreamItem<typename SyncQueue<_I>, typename SyncMap<_K, _V>>(_out));
 
         item->Send([this, item, fn] {
             while (item->Input()->CanReceive()) {
@@ -339,11 +333,8 @@ public:
     }
 
 	template <typename _I>
-	using Bouncer = _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>;
-
-	template <typename _I>
-	typename Bouncer<_I> Filter(const std::function<bool (_I)>& fn) { 
-		Bouncer<_I>::Ptr item(new Bouncer<_I>(_out));
+	typename _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>> Filter(const std::function<bool (_I)>& fn) {
+		_StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>::Ptr item(new _StreamItem<typename SyncQueue<_I>, typename SyncQueue<_I>>(_out));
 		
 		item->Send([item] {
 			while (item->Input()->CanReceive()) {
@@ -362,11 +353,8 @@ public:
 	}
 
 	template <typename _K, typename _V, typename _O>
-	using Reducer = _StreamItem<typename SyncMap<_K, _V>, typename SyncQueue<_O>>;
-
-	template <typename _K, typename _V, typename _O>
-	typename Reducer<_K, _V, _O>::Ptr Reduce(const std::function<_O(_K, _V)>& fn) {
-		Reducer<_K, _V, _O>::Ptr item(new Reducer<_K, _V, _O>(_out));
+	typename _StreamItem<typename SyncMap<_K, _V>, typename SyncQueue<_O>>::Ptr Reduce(const std::function<_O(_K, _V)>& fn) {
+		_StreamItem<typename SyncMap<_K, _V>, typename SyncQueue<_O>>::Ptr item(new _StreamItem<typename SyncMap<_K, _V>, typename SyncQueue<_O>>(_out));
 		item->Send([item, fn] {
 			item->Input()->ForEach([item, fn] (const std::pair<_K, _V>& pair) {
 				auto o = fn(pair.first, pair.second);
