@@ -177,14 +177,14 @@ public:
     }
 
     void Send(const std::function<R ()>& c, const std::function<void (R)>& t) {
-        Task<R>::Ptr ptr(new Task<R>(c, t));
+        typename Task<R>::Ptr ptr(new Task<R>(c, t));
         _msgQ.Push(ptr);
     }
 
     template <typename ..._Args>
     void Call(_Args... args) {
         auto fun = std::bind(_c, args...);
-        Task<R>::Ptr ptr(new Task<R>(fun));
+        typename Task<R>::Ptr ptr(new Task<R>(fun));
 
         _msgQ.Push(ptr);
     }
