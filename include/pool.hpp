@@ -34,18 +34,30 @@ protected:
 template<typename R>
 void _Task<R>::Exec() { _c(); }
 
+template <typename T>
+struct _func_traits {
+	typedef std::function<void(T)> FuncType;
+};
+
+template <>
+struct _func_traits<void> {
+	typedef std::function<void()> FuncType;
+};
+ 
+
 template <typename R>
 class Task : public _Task<R> {
 public:
     typedef std::shared_ptr<Task<R>> Ptr;
+	typedef typename _func_traits<R>::FuncType FuncType;
 
-    Task(const std::function<R()>& c, const std::function<void(R)>& t) : _Task<R>(c), _t(t) {}
+    Task(const std::function<R()>& c, const FuncType& t) : _Task<R>(c), _t(t) {}
     Task(const std::function<R()>& c) : _Task<R>(c) { _t = [] (R) {}; }
 
     virtual void Exec();
 
 private:
-	std::function<void(R)> _t;
+	FuncType _t;
 };
 
 template<>
