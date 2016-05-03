@@ -116,12 +116,13 @@ private:
 template <typename R = void, typename ...Args>
 class Pool : public _Pool {
 public:
+	typedef typename _func_traits<R>::FuncType FuncType;
     typedef std::shared_ptr<Pool<R, Args...>> Ptr;
 
     explicit Pool(size_t s = std::thread::hardware_concurrency()) {init(s); }
     explicit Pool(const std::function<R (Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s);}
     explicit Pool(const std::function<R (Args...)>& c,
-                  const std::function<void (R)>& t,
+                  const FuncType& t,
                   size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
     { init(s); }
 
@@ -162,7 +163,7 @@ public:
     }
 
     template <typename ..._Args>
-    void Send(const std::function<R (_Args...)>& c, const std::function<void (R)>& t, _Args... args) {
+    void Send(const std::function<R (_Args...)>& c, const FuncType& t, _Args... args) {
         auto fun = std::bind(c, args...);
         typename Task<R>::Ptr ptr(new Task<R>(fun, t));
 
@@ -176,7 +177,7 @@ public:
         }
     }
 
-    void Send(const std::function<R ()>& c, const std::function<void (R)>& t) {
+    void Send(const std::function<R ()>& c, const FuncType& t) {
         typename Task<R>::Ptr ptr(new Task<R>(c, t));
         _msgQ.Push(ptr);
     }
@@ -286,7 +287,7 @@ private:
     Pool& operator=(Pool const&) = delete;
 
     const std::function<R (Args...)> _c;
-    const std::function<void (R)> _t;
+    const FuncType _t;
 	std::function<void(const std::exception&)> _ee;
 };
 
