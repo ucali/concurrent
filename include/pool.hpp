@@ -342,10 +342,10 @@ public:
 	typename Bouncer<_I>::Ptr Filter(const std::function<bool (_I)>& fn) { 
 		typename Bouncer<_I>::Ptr item(new Bouncer<_I>(_out));
 		
-		item->Send([item] {
+		item->Send([item, fn] {
 			while (item->Input()->CanReceive()) {
 				while (item->Input()->CanReceive()) {
-					auto pop = val;
+					auto val = item->Input()->Pop();
 					auto ret = fn(val);
 					if (ret) {
 						item->Output()->Push(val);
