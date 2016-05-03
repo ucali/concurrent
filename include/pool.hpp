@@ -61,10 +61,10 @@ private:
 };
 
 template<>
-void Task<void>::Exec() { _c(); _t(); }
+void Task<void>::Exec() { this->_c(); this->_t(); }
 
 template<typename R>
-void Task<R>::Exec() { _t(std::move(_c())); }
+void Task<R>::Exec() { this->_t(std::move(this->_c())); }
 
 class _Pool {
 public:
