@@ -18,15 +18,14 @@ namespace {
 template <typename R>
 class _Task {
 public:
-    typedef std::function<R ()> Callback;
     typedef std::shared_ptr<_Task<R>> Ptr;
 
-    _Task(const Callback& c) : _c(c) { }
+    _Task(const std::function<R()>& c) : _c(c) { }
 
     virtual void Exec();
 
 protected:
-    const Callback _c;
+    const std::function<R()> _c;
 
     _Task(_Task const&) = delete;
     _Task& operator=(_Task const&) = delete;
@@ -39,15 +38,14 @@ template <typename R>
 class Task : public _Task<R> {
 public:
     typedef std::shared_ptr<Task<R>> Ptr;
-    typedef std::function<void (R)> Term;
 
-    Task(const Callback& c, const Term& t) : _Task(c), _t(t) {}
-    Task(const Callback& c) : _Task(c) { _t = [] (R) {}; }
+    Task(const std::function<R()>& c, const std::function<void(R)>& t) : _Task(c), _t(t) {}
+    Task(const std::function<R()>& c) : _Task(c) { _t = [] (R) {}; }
 
     virtual void Exec();
 
 private:
-    Term _t;
+	std::function<void(R)> _t;
 };
 
 template<>
