@@ -16,6 +16,8 @@ class _SyncMap {
 public:
 	typedef std::shared_ptr<_SyncMap<_M, _K, _V>> Ptr;
 
+	virtual ~_SyncMap() { Close(); }
+
     void Insert(const _K& k, const _V& v) {
         std::unique_lock<std::mutex> lock(_mutex);
         _map.insert(std::pair<_K, _V>(k, v));

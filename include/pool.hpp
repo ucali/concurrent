@@ -302,7 +302,7 @@ public:
 	typename Bouncer<_I>::Ptr Filter(const std::function<bool (_I)>& fn) { 
         typename Bouncer<_I>::Ptr item(new Bouncer<_I>(_out, _pool));
 		
-        item->Send([item, fn] {
+		_pool->Send([item, fn] {
             while (item->Input()->CanReceive()) {
                 auto val = item->Input()->Pop();
                 auto ret = fn(val);
@@ -310,6 +310,7 @@ public:
                     item->Output()->Push(val);
                 }
             }
+			item->Output()->Close();
         }, 2);
 
 		return item;
@@ -335,10 +336,10 @@ public:
 	}
 
 private:
+    typename Pool<void, _Args...>::Ptr _pool;
+
     typename I::Ptr _in;
     typename O::Ptr _out;
-
-    typename Pool<void, _Args...>::Ptr _pool;
 };
 
 }

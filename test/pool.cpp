@@ -106,3 +106,20 @@ TEST_CASE("TestPoolProcessing") {
 	}
 	input->Close();
 }
+
+TEST_CASE("TestPoolFilter") {
+	using namespace concurrent;
+
+	Streamer<int> item;
+	item.Filter<int>([](int k) {
+		return k < 50;
+	})->Map<int, int, int>([](int i) {
+		return std::move(std::pair<int, int>(i, i));
+	});
+
+	auto input = item.Input();
+	for (int i = 0; i < 1000; i++) {
+		input->Push(i);
+	}
+	input->Close();
+}
