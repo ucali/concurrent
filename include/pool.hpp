@@ -317,11 +317,11 @@ public:
 	}
 
 	template <typename _K, typename _V, typename _O>
-	using Reducer = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
+	using Collector = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
 
 	template <typename _K, typename _V, typename _O>
-	typename Reducer<_K, _V, _O>::Ptr Reduce(const std::function<_O(_K, _V)>& fn) {
-        typename Reducer<_K, _V, _O>::Ptr item(new Reducer<_K, _V, _O>(_out, _pool));
+	typename Collector<_K, _V, _O>::Ptr Collect(const std::function<_O(_K, _V)>& fn) {
+        typename Collector<_K, _V, _O>::Ptr item(new Collector<_K, _V, _O>(_out, _pool));
 
         _pool->Send([item, fn] {
             item->Input()->Wait();
@@ -354,7 +354,10 @@ template <typename _I>
 using Bouncer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
 
 template <typename _K, typename _V, typename _O>
-using Reducer = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
+using Collector = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
+
+template <typename _I, typename _O>
+using Reducer = _StreamItem<SyncQueue<_I>, _O>;
 
 }
 

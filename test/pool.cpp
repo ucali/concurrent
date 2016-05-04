@@ -89,14 +89,13 @@ TEST_CASE("TestPoolDefault") {
     );
 }
 
-
 TEST_CASE("TestPoolProcessing") {
     using namespace concurrent;
 
 	Streamer<int> item;
     item.Map<int, int, int>([] (int i) {
         return std::move(std::pair<int, int>(i, i));
-    })->Reduce<int, int, int>([](int k, int v) {
+    })->Collect<int, int, int>([](int k, int v) {
 		return k + v;
 	});
 
