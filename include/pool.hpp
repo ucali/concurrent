@@ -49,16 +49,18 @@ template <typename R>
 class Task : public _Task<R> {
 public:
     typedef std::shared_ptr<Task<R>> Ptr;
-	typedef typename _func_traits<R>::FuncType FuncType;
 
-    Task(const std::function<R()>& c, const FuncType& t) : _Task<R>(c), _t(t) {}
+    Task(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) : _Task<R>(c), _t(t) {}
     Task(const std::function<R()>& c) : _Task<R>(c) { _t = [] (R) {}; }
 
     virtual void Exec();
 
 private:
-	FuncType _t;
+	typename _func_traits<R>::FuncType _t;
 };
+
+template<>
+Task<void>::Task(const std::function<void()>& c) : _Task<void>(c) { _t = []() {}; }
 
 template<>
 void Task<void>::Exec() { this->_c(); this->_t(); }
@@ -116,13 +118,12 @@ private:
 template <typename R = void, typename ...Args>
 class Pool : public _Pool {
 public:
-	typedef typename _func_traits<R>::FuncType FuncType;
     typedef std::shared_ptr<Pool<R, Args...>> Ptr;
 
     explicit Pool(size_t s = std::thread::hardware_concurrency()) {init(s); }
     explicit Pool(const std::function<R (Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s);}
     explicit Pool(const std::function<R (Args...)>& c,
-                  const FuncType& t,
+                  const typename _func_traits<R>::FuncType& t,
                   size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
     { init(s); }
 
@@ -163,7 +164,7 @@ public:
     }
 
     template <typename ..._Args>
-    void Send(const std::function<R (_Args...)>& c, const FuncType& t, _Args... args) {
+    void Send(const std::function<R (_Args...)>& c, const typename _func_traits<R>::FuncType& t, _Args... args) {
         auto fun = std::bind(c, args...);
         typename Task<R>::Ptr ptr(new Task<R>(fun, t));
 
@@ -177,7 +178,7 @@ public:
         }
     }
 
-    void Send(const std::function<R ()>& c, const FuncType& t) {
+    void Send(const std::function<R ()>& c, const typename _func_traits<R>::FuncType& t) {
         typename Task<R>::Ptr ptr(new Task<R>(c, t));
         _msgQ.Push(ptr);
     }
@@ -189,50 +190,6 @@ public:
 
         _msgQ.Push(ptr);
     }
-
-    /*PROCESS
-
-    template <typename _I, typename _K, typename _V>
-    using Mapper = Pool<void, typename SyncQueue<_I>::Ptr, typename SyncMap<_K, _V>::Ptr>;
-
-    template <typename _I, typename _K, typename _V>
-    typename Mapper<_I, _K, _V>::Ptr
-    Map(typename SyncQueue<_I>::Ptr in, typename SyncMap<_K, _V>::Ptr out, const std::function<void (typename SyncQueue<_I>::Ptr, typename SyncMap<_K, _V>::Ptr)>& op) {
-        Mapper<_I, _K, _V>::Ptr pool(new Mapper<_I, _K, _V>(op));
-        pool->Call<typename SyncQueue<_I>::Ptr, typename SyncMap<_K, _V>::Ptr>(in, out);
-        return pool;
-    }
-
-    template <typename _I, typename _O>
-    using ListCollector = Pool<void, typename SyncQueue<_I>::Ptr, typename SyncQueue<_O>::Ptr>;
-
-    template <typename _I, typename _O>
-    typename ListCollector<_I, _O>::Ptr
-    Collect(typename SyncQueue<_I>::Ptr in, typename SyncQueue<_O>::Ptr out, const std::function<void (typename SyncQueue<_I>::Ptr, typename SyncQueue<_O>::Ptr)>& op) {
-        ListCollector<_I, _O>::Ptr pool(new ListCollector<_I, _O>(op));
-        pool->Call<typename SyncQueue<_I>::Ptr, typename SyncQueue<_O>::Ptr>(in, out);
-        return pool;
-    }
-
-    template <typename _K, typename _V, typename _O>
-    using MapCollector = Pool<void, typename SyncMap<_K, _V>::Ptr, typename SyncQueue<_O>::Ptr>;
-
-    template <typename _K, typename _V, typename _O>
-    typename MapCollector<_K, _V, _O>::Ptr Collect(typename SyncMap<_K, _V>::Ptr in, typename SyncQueue<_O>::Ptr out, const std::function<void (typename SyncMap<_K, _V>::Ptr, typename SyncQueue<_O>::Ptr)>& op) {
-        MapCollector<_K, _V, _O>::Ptr pool(new MapCollector<_K, _V, _O>(op));
-        pool->Call<typename SyncMap<_K, _V>::Ptr, typename SyncQueue<_O>::Ptr>(in, out);
-        return pool;
-    }
-
-    template <typename _I>
-    using ListFilter = Pool<void, typename SyncQueue<_I>::Ptr, typename SyncQueue<_I>::Ptr>;
-
-    template <typename _I>
-    typename ListFilter<_I>::Ptr Filter(typename SyncQueue<_I>::Ptr in, typename SyncQueue<_I>::Ptr out, const std::function<void (typename SyncQueue<_I>::Ptr, typename SyncQueue<_I>::Ptr)>& op) {
-        ListFilter<_I>::Ptr pool(new ListFilter<_I>(op));
-        pool->Call<typename SyncQueue<_I>::Ptr, typename SyncQueue<_I>::Ptr>(in, out);
-        return pool;
-    }*/
 
     virtual void Close() {
         _guard.store(false);
@@ -246,7 +203,9 @@ public:
         }
 
         for (auto& t : _threads) {
-            t.join();
+            if (t.joinable()) {
+                t.join();
+            }
         }
 
         _threads.clear();
@@ -269,25 +228,25 @@ private:
             }
         };
 
-		_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
-
         for (int i = 0; i < s; i++) {
             _threads.emplace_back(func);
         }
+
+        _ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
     }
 
     SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;
+    std::vector<std::thread> _threads;
 
     std::atomic_bool _guard;
     mutable std::mutex _mutex;
 
-    std::vector<std::thread> _threads;
 
     Pool(Pool const&) = delete;
     Pool& operator=(Pool const&) = delete;
 
     const std::function<R (Args...)> _c;
-    const FuncType _t;
+    const typename _func_traits<R>::FuncType _t;
 	std::function<void(const std::exception&)> _ee;
 };
 
@@ -300,18 +259,18 @@ inline Pool<R>& SystemTaskPool() {
 namespace /*anonimous*/ {
 
 template <typename I, typename O, typename ..._Args>
-class _StreamItem : public Pool<void, _Args...> {
+class _StreamItem {
 public:
     typedef std::shared_ptr<_StreamItem<I, O, _Args...>> Ptr;
 
-    _StreamItem(_Args... a) : Pool<void, _Args...>(a...), _in(new O()), _out(_in) {}
-    _StreamItem(typename I::Ptr i, _Args... a) : Pool<void, _Args...>(a...), _in(i), _out(new O()) {}
+    _StreamItem(_Args... a) : _pool(new Pool<void, _Args...>(a...)), _in(new O()), _out(_in) {}
+    _StreamItem(typename I::Ptr i, _Args... a) : _pool(new Pool<void, _Args...>(a...)), _in(i), _out(new O()) {}
+    _StreamItem(typename I::Ptr i, typename Pool<void, _Args...>::Ptr p) : _pool(p), _in(i), _out(new O()) {}
 
 	virtual ~_StreamItem() {
-		this->Close();
-		if (_child) { 
-			_child->Close(); 
-		} 
+		if (_pool->IsRunning()) {
+			_pool->Close();
+		}
 	}
 
     typename I::Ptr Input() { return _in; }
@@ -322,17 +281,17 @@ public:
 
     template <typename _I, typename _K, typename _V>
     typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
-		typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out));
+        typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out, _pool));
 
-        item->Send([this, item, fn] {
+        _pool->Send([this, item, fn] {
             while (item->Input()->CanReceive()) {
                 auto ret = fn(item->Input()->Pop());
                 item->Output()->Insert(ret.first, ret.second);
             }
 
-        }, 2);
+            item->Output()->Close();
+        });
 
-		_child = item;
         return item;
     }
 
@@ -341,21 +300,18 @@ public:
 
 	template <typename _I>
 	typename Bouncer<_I>::Ptr Filter(const std::function<bool (_I)>& fn) { 
-		typename Bouncer<_I>::Ptr item(new Bouncer<_I>(_out));
+        typename Bouncer<_I>::Ptr item(new Bouncer<_I>(_out, _pool));
 		
-		item->Send([item, fn] {
-			while (item->Input()->CanReceive()) {
-				while (item->Input()->CanReceive()) {
-					auto val = item->Input()->Pop();
-					auto ret = fn(val);
-					if (ret) {
-						item->Output()->Push(val);
-					}
-				}
-			}
-		}, 2);
+        item->Send([item, fn] {
+            while (item->Input()->CanReceive()) {
+                auto val = item->Input()->Pop();
+                auto ret = fn(val);
+                if (ret) {
+                    item->Output()->Push(val);
+                }
+            }
+        }, 2);
 
-		_child = item;
 		return item;
 	}
 
@@ -364,8 +320,10 @@ public:
 
 	template <typename _K, typename _V, typename _O>
 	typename Reducer<_K, _V, _O>::Ptr Reduce(const std::function<_O(_K, _V)>& fn) {
-		typename Reducer<_K, _V, _O>::Ptr item(new Reducer<_K, _V, _O>(_out));
-		item->Send([item, fn] {
+        typename Reducer<_K, _V, _O>::Ptr item(new Reducer<_K, _V, _O>(_out, _pool));
+
+        _pool->Send([item, fn] {
+            item->Input()->Wait();
 			item->Input()->ForEach([item, fn] (const std::pair<_K, _V>& pair) {
 				auto o = fn(pair.first, pair.second);
 				item->Output()->Push(o);
@@ -373,7 +331,6 @@ public:
 		
 		}, 2);
 
-		_child = item;
 		return item;
 	}
 
@@ -381,7 +338,7 @@ private:
     typename I::Ptr _in;
     typename O::Ptr _out;
 
-	_Pool::Ptr _child;
+    typename Pool<void, _Args...>::Ptr _pool;
 };
 
 }

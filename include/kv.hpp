@@ -3,6 +3,7 @@
 
 #include <map>
 #include <unordered_map>
+#include <condition_variable>
 
 #include <mutex>
 
@@ -60,8 +61,19 @@ public:
 		std::for_each(_map.begin(), _map.end(), fn);
 	}
 
+    void Close() {
+        std::unique_lock<std::mutex> lock(_mutex);
+        _waiter.notify_all();
+    }
+
+    void Wait() {
+        std::unique_lock<std::mutex> lock(_mutex);
+        _waiter.wait(lock);
+    }
+
 private:
     mutable std::mutex _mutex;
+    std::condition_variable _waiter;
 
     _M _map;
 };

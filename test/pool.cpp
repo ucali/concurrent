@@ -61,12 +61,11 @@ TEST_CASE("TestPoolSpawnSimple") {
 
     CHECK(simple.Size() == 2);
 
-    simple.Spawn<int, std::string>(
-        [] (int a, std::string& b){
-			assert(a == 1);
-			assert(b == "test");
-        }, 1, std::string("test")
-    );
+    std::function<void (int, std::string)> fun = [] (int a, std::string b){
+        assert(a == 1);
+        assert(b == "test");
+    };
+    simple.Spawn<int, std::string>(fun, 1, std::string("test"));
 
     simple.Spawn(
         [&simple] (){
@@ -88,8 +87,6 @@ TEST_CASE("TestPoolDefault") {
             std::cout << "Shutting down default pool.." << std::endl;
         }
     );
-
-    REQUIRE(concurrent::SystemTaskPool<>().Size() == 5);
 }
 
 
@@ -98,14 +95,14 @@ TEST_CASE("TestPoolProcessing") {
 
 	Streamer<int> item;
     item.Map<int, int, int>([] (int i) {
-        std::cout << i << std::endl;
         return std::move(std::pair<int, int>(i, i));
     })->Reduce<int, int, int>([](int k, int v) {
 		return k + v;
 	});
 
 	auto input = item.Input();
-	input->Push(1);
-	input->Push(2);
+	for (int i = 0; i < 1000; i++) {
+		input->Push(i);
+	}
 	input->Close();
 }
