@@ -120,7 +120,7 @@ class Pool : public _Pool {
 public:
     typedef std::shared_ptr<Pool<R, Args...>> Ptr;
 
-    explicit Pool(size_t s = std::thread::hardware_concurrency()) {init(s); }
+    explicit Pool(size_t s = std::thread::hardware_concurrency()) { init(s); }
     explicit Pool(const std::function<R (Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s);}
     explicit Pool(const std::function<R (Args...)>& c,
                   const typename _func_traits<R>::FuncType& t,
@@ -256,7 +256,7 @@ inline Pool<R>& SystemTaskPool() {
     return pool;
 }
 
-namespace /*anonimous*/ {
+namespace /*_*/ {
 
 template <typename I, typename O, typename ..._Args>
 class _StreamItem {
