@@ -68,14 +68,6 @@ void Task<void>::Exec() { this->_c(); this->_t(); }
 template<typename R>
 void Task<R>::Exec() { this->_t(std::move(this->_c())); }
 
-class _Pool {
-public:
-	typedef std::shared_ptr<_Pool> Ptr;
-	virtual ~_Pool() { }
-
-	virtual void Close() = 0;
-};
-
 }
 
 class WaitGroup {
@@ -119,7 +111,7 @@ private:
 };
 
 template <typename R = void, typename ...Args>
-class Pool : public _Pool {
+class Pool {
 public:
     typedef std::shared_ptr<Pool<R, Args...>> Ptr;
 
@@ -130,7 +122,7 @@ public:
                   size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
     { init(s); }
 
-    virtual ~Pool() { Close(); }
+    ~Pool() { Close(); }
 
     bool IsRunning() const { return _guard.load(); }
     size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _threads.size(); }
@@ -194,7 +186,7 @@ public:
         _msgQ.Push(ptr);
     }
 
-    virtual void Close() {
+    void Close() {
         _guard.store(false);
 
         if (_threads.empty()) {
