@@ -154,5 +154,6 @@ TEST_CASE("TestPoolSimpleClass") {
 	input->Close();
 
 	auto output = result->Output();
+	output->Wait();
 	result->Close();
 }
