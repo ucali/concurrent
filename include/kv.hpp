@@ -16,6 +16,7 @@ class _SyncMap {
 public:
 	typedef std::shared_ptr<_SyncMap<_M, _K, _V>> Ptr;
 
+	_SyncMap() {}
 	virtual ~_SyncMap() { Close(); }
 
     void Insert(const _K& k, const _V& v) {
@@ -64,20 +65,32 @@ public:
 	}
 
     void Close() {
-        std::unique_lock<std::mutex> lock(_mutex);
-        _waiter.notify_all();
+		{
+			std::unique_lock<std::mutex> lock(_mutex);
+			if (_opened) {
+				_opened = false;
+			}
+		}
+		_waiter.notify_all();
     }
 
     void Wait() {
         std::unique_lock<std::mutex> lock(_mutex);
-        _waiter.wait(lock);
+		if (_opened) {
+			_waiter.wait(lock);
+		}
     }
 
 private:
+	bool _opened = true;
+	
     mutable std::mutex _mutex;
     std::condition_variable _waiter;
 
     _M _map;
+
+	_SyncMap(_SyncMap const&) = delete;
+	_SyncMap& operator=(_SyncMap const&) = delete;
 };
 
 }

@@ -104,7 +104,6 @@ private:
     mutable std::mutex _mutex;
     std::condition_variable _empty;
 
-
     WaitGroup(WaitGroup const&) = delete;
     WaitGroup& operator=(WaitGroup const&) = delete;
 
@@ -122,7 +121,7 @@ public:
                   size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
     { init(s); }
 
-    ~Pool() { Close(); }
+	~Pool() {  Close(); }
 
     bool IsRunning() const { return _guard.load(); }
     size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _threads.size(); }
@@ -187,23 +186,30 @@ public:
     }
 
     void Close() {
-        _guard.store(false);
+		try {
+			std::unique_lock<std::mutex> lock(_mutex);
 
-        if (_threads.empty()) {
-            return;
-        }
+			if (_threads.empty()) {
+				return;
+			}
 
-        for (auto i = 0; i < _threads.size(); i++) {
-            _msgQ.Push(nullptr);
-        }
+			_guard.store(false);
 
-        for (auto& t : _threads) {
-            if (t.joinable()) {
-                t.join();
-            }
-        }
+			for (auto i = 0; i < _threads.size(); i++) {
+				_msgQ.Push(nullptr);
+			}
 
-        _threads.clear();
+			for (auto& t : _threads) {
+				if (t.joinable()) {
+					t.join();
+				}
+			}
+
+			_threads.clear();
+		}
+		catch (...) {
+			std::cerr << "Error shutting down pool." << std::endl; 
+		}
     }
 
 private:
@@ -254,18 +260,16 @@ inline Pool<R>& SystemTaskPool() {
 namespace /*_*/ {
 
 template <typename I, typename O, typename ..._Args>
-class _StreamItem {
+class _StreamItem  {
 public:
     typedef std::shared_ptr<_StreamItem<I, O, _Args...>> Ptr;
 
     _StreamItem(_Args... a) : _pool(new Pool<void, _Args...>(a...)), _in(new O()), _out(_in) {}
     _StreamItem(typename I::Ptr i, _Args... a) : _pool(new Pool<void, _Args...>(a...)), _in(i), _out(new O()) {}
-    _StreamItem(typename I::Ptr i, typename Pool<void, _Args...>::Ptr p) : _pool(p), _in(i), _out(new O()) {}
 
-	virtual ~_StreamItem() {
-		if (_pool->IsRunning()) {
-			_pool->Close();
-		}
+	_StreamItem(typename I::Ptr i, typename Pool<void, _Args...>::Ptr p) : _in(i), _out(new O()) { _pool = p; }
+
+	~_StreamItem() {
 	}
 
     typename I::Ptr Input() { return _in; }
@@ -278,20 +282,14 @@ public:
     typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
         typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out, _pool));
 
-		concurrent::WaitGroup::Ptr wg(new concurrent::WaitGroup(2));
-
-        _pool->Send([this, item, fn, wg] {
+        _pool->Send([item, fn] {
+			auto output = item->Output();
             while (item->Input()->CanReceive()) {
                 auto ret = fn(item->Input()->Pop());
-                item->Output()->Insert(ret.first, ret.second);
+				output->Insert(ret.first, ret.second);
             }
-			wg->Finish();
-        }, wg->Size());
-
-		_pool->Send([item, wg] {
-			wg->Wait();
-			item->Output()->Close();
-		});
+			output->Close();
+        });
 
         return item;
     }
@@ -312,7 +310,7 @@ public:
                 }
             }
 			item->Output()->Close();
-        }, 2);
+        });
 
 		return item;
 	}
@@ -335,12 +333,19 @@ public:
 
 		return item;
 	}
+	
+	void Close() {
+		_pool->Close();
+	}
 
 private:
     typename Pool<void, _Args...>::Ptr _pool;
 
     typename I::Ptr _in;
     typename O::Ptr _out;
+
+	_StreamItem(_StreamItem const&) = delete;
+	_StreamItem& operator=(_StreamItem const&) = delete;
 };
 
 }

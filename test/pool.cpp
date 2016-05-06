@@ -5,6 +5,7 @@
 #include <iostream>
 #include <assert.h>
 
+
 TEST_CASE("TestPoolSimple") {
     concurrent::Pool<> simple;
 
@@ -93,7 +94,7 @@ TEST_CASE("TestPoolProcessing") {
     using namespace concurrent;
 
 	Streamer<int> item;
-    item.Map<int, int, int>([] (int i) {
+    auto result = item.Map<int, int, int>([] (int i) {
         return std::move(std::pair<int, int>(i, i));
     })->Collect<int, int, int>([](int k, int v) {
 		return k + v;
@@ -104,13 +105,14 @@ TEST_CASE("TestPoolProcessing") {
 		input->Push(i);
 	}
 	input->Close();
+	result->Close();
 }
 
 TEST_CASE("TestPoolFilter") {
 	using namespace concurrent;
 
 	Streamer<int> item;
-	item.Filter<int>([](int k) {
+	auto result = item.Filter<int>([](int k) {
 		return k < 50;
 	})->Map<int, int, int>([](int i) {
 		return std::move(std::pair<int, int>(i, i));
@@ -121,4 +123,36 @@ TEST_CASE("TestPoolFilter") {
 		input->Push(i);
 	}
 	input->Close();
+	result->Output()->Close();
+	result->Close();
+}
+
+TEST_CASE("TestPoolSimpleClass") {
+	using namespace concurrent;
+
+	class Test {
+	public:
+		Test() {}
+		Test(int64_t i, bool s, std::string v) : id(i), status(s), val(v) { }
+
+		int64_t id = 0;
+		bool status = true;
+		std::string val = "hello";
+	};
+
+	Streamer<Test> item;
+	auto result = item.Filter<Test>([](Test k) {
+		return k.status == true;
+	})->Map<Test, int64_t, Test>([](Test t) {
+		return std::move(std::pair<int64_t, Test>(t.id, t));
+	});
+
+	auto input = item.Input();
+	for (int i = 0; i < 1000; i++) {
+		input->Push({i, i % 2 == 0, "hello world"}); 
+	}
+	input->Close();
+
+	auto output = result->Output();
+	result->Close();
 }
