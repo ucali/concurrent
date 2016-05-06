@@ -36,7 +36,7 @@ TEST_CASE("TestHashMap") {
     hash.Clear();
 }
 
-TEST_CASE("TestMapCallback") {
+TEST_CASE("TestMapCallback", "DefaultPool") {
 
     concurrent::SyncQueue<int>::Ptr in(new concurrent::SyncQueue<int>());
     concurrent::SyncMap<int, int>::Ptr out(new concurrent::SyncMap<int, int>());

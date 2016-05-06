@@ -78,7 +78,7 @@ TEST_CASE("TestPoolSpawnSimple") {
     REQUIRE(simple.Size() == 4);
 }
 
-TEST_CASE("TestPoolDefault") {
+TEST_CASE("TestPoolDefault", "DefaultPool") {
     concurrent::SystemTaskPool<>().Spawn(
         [] (){
             while (concurrent::SystemTaskPool<>().IsRunning()) {

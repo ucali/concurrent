@@ -51,7 +51,7 @@ TEST_CASE("TestQueueOrder") {
     REQUIRE(sync.Pop() == 2);
 }
 
-TEST_CASE("TestQueuePipeline") {
+TEST_CASE("TestQueuePipeline", "DefaultPool") {
 
     concurrent::SyncQueue<int> in;
     concurrent::SyncQueue<int> out;
@@ -68,7 +68,8 @@ TEST_CASE("TestQueuePipeline") {
     );
 
     pool.Send([&in] {
-        std::cout << "TID: " << std::this_thread::get_id() << std::endl;
+
+		std::cout << "TID: " << std::this_thread::get_id() << std::endl;
 
         in.Push(1);
         in.Push(2);
@@ -76,18 +77,16 @@ TEST_CASE("TestQueuePipeline") {
 
         in.Close();
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::cout << "TID: " << std::this_thread::get_id() << std::endl;
     });
 
     pool.Send([&in, &out] {
-        std::cout << "TID: " << std::this_thread::get_id() << std::endl;
+		std::cout << "TID: " << std::this_thread::get_id() << std::endl;
 
         while (in.CanReceive()) {
             out.Push(in.Pop() + 1);
         }
         out.Close();
-
-        std::this_thread::sleep_for(std::chrono::seconds(1));
     });
 
 

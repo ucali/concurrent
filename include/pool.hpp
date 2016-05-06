@@ -98,6 +98,9 @@ public:
     }
 
     void Wait() {
+		if (!_group.Size()) {
+			return;
+		}
         std::unique_lock<std::mutex> lock(_mutex);
         _empty.wait(lock);
     }
@@ -252,7 +255,7 @@ private:
 
 template <typename R = void>
 inline Pool<R>& SystemTaskPool() {
-    static Pool<R> pool;
+    static Pool<R> pool(1);
     return pool;
 }
 
@@ -283,14 +286,20 @@ public:
     typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
         typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out, _pool));
 
-        _pool->Send([this, item, fn] {
+		concurrent::WaitGroup::Ptr wg(new concurrent::WaitGroup(2));
+
+        _pool->Send([this, item, fn, wg] {
             while (item->Input()->CanReceive()) {
                 auto ret = fn(item->Input()->Pop());
                 item->Output()->Insert(ret.first, ret.second);
             }
+			wg->Finish();
+        }, wg->Size());
 
-            item->Output()->Close();
-        });
+		_pool->Send([item, wg] {
+			wg->Wait();
+			item->Output()->Close();
+		});
 
         return item;
     }
