@@ -11,15 +11,21 @@ public:
 };
 
 TEST_CASE("TestQueueNullSimple") {
+	std::cout << "TestQueueNullSimple -> " << std::endl;
+
     concurrent::SyncQueue<EmptyItem*> sync;
     sync.Push(nullptr);
     sync.Push(nullptr);
 
     REQUIRE(sync.Pop() == nullptr);
     REQUIRE(sync.Pop() == nullptr);
+
+	std::cout << "<- TestQueueNullSimple" << std::endl;
 }
 
 TEST_CASE("TestQueueTimeout") {
+	std::cout << "TestQueueTimeout -> " << std::endl;
+
     concurrent::SyncQueue<std::string> sync(2);
     REQUIRE(sync.Pop(100) == std::string());
 
@@ -40,32 +46,31 @@ TEST_CASE("TestQueueTimeout") {
     sync_ptr.Push(&value);
     REQUIRE(sync_ptr.Pop(100) == &value);
     REQUIRE(sync_ptr.Pop(100) == nullptr);
+
+	std::cout << "<- TestQueueTimeout" << std::endl;
 }
 
 TEST_CASE("TestQueueOrder") {
+	std::cout << "TestQueueOrder -> " << std::endl;
+
     concurrent::SyncQueue<int> sync;
     sync.Push(1);
     sync.Push(2);
 
     REQUIRE(sync.Pop() == 1);
     REQUIRE(sync.Pop() == 2);
+
+	std::cout << "<- TestQueueOrder" << std::endl;
 }
 
 TEST_CASE("TestQueuePipeline", "DefaultPool") {
+	std::cout << "TestQueuePipeline -> " << std::endl;
+
 
     concurrent::SyncQueue<int> in;
     concurrent::SyncQueue<int> out;
 
     auto& pool = concurrent::SystemTaskPool<>();
-
-    concurrent::SystemTaskPool<>().Spawn(
-        [] (){
-            while (concurrent::SystemTaskPool<>().IsRunning()) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
-            std::cout << "Shutting down default pool.." << std::endl;
-        }
-    );
 
     pool.Send([&in] {
 
@@ -82,10 +87,12 @@ TEST_CASE("TestQueuePipeline", "DefaultPool") {
 
     pool.Send([&in, &out] {
 		std::cout << "TID: " << std::this_thread::get_id() << std::endl;
-
-        while (in.CanReceive()) {
-            out.Push(in.Pop() + 1);
-        }
+		try {
+			while (in.CanReceive()) {
+				out.Push(in.Pop() + 1);
+			}
+		}
+		catch (...) {}
         out.Close();
     });
 
@@ -99,4 +106,6 @@ TEST_CASE("TestQueuePipeline", "DefaultPool") {
 
     std::cout << "MAIN TID: " << std::this_thread::get_id() << std::endl;
 
+
+	std::cout << "<- TestQueuePipeline" << std::endl;
 }

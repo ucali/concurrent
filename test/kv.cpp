@@ -37,6 +37,7 @@ TEST_CASE("TestHashMap") {
 }
 
 TEST_CASE("TestMapCallback", "DefaultPool") {
+	std::cout << "TestMapCallback -> " << std::endl;
 
     concurrent::SyncQueue<int>::Ptr in(new concurrent::SyncQueue<int>());
     concurrent::SyncMap<int, int>::Ptr out(new concurrent::SyncMap<int, int>());
@@ -64,9 +65,11 @@ TEST_CASE("TestMapCallback", "DefaultPool") {
     }
     in->Close();
 
+	std::cout << "<- TestMapCallback" << std::endl;
 }
 
 TEST_CASE("TestMapPipeline") {
+	std::cout << "TestMapPipeline -> " << std::endl;
 
     concurrent::SyncQueue<int>::Ptr in(new concurrent::SyncQueue<int>());
     concurrent::SyncMap<int, int>::Ptr out(new concurrent::SyncMap<int, int>());
@@ -102,4 +105,6 @@ TEST_CASE("TestMapPipeline") {
 	});
 
 	out->Clear();
+
+	std::cout << "<- TestMapPipeline" << std::endl;
 }

@@ -7,6 +7,8 @@
 
 
 TEST_CASE("TestPoolSimple") {
+	std::cout << "TestPoolSimple -> " << std::endl;
+
     concurrent::Pool<> simple;
 
 	std::function<void (int, std::string)> fun = [](int a, std::string b) {
@@ -25,9 +27,13 @@ TEST_CASE("TestPoolSimple") {
 		val2 += 0.1;
 	};
     simple.Send<std::string, int, double, double>(fn2, std::string("test"), 1, 0.1, 0.1);
+
+	std::cout << "<- TestPoolSimple" << std::endl;
 }
 
 TEST_CASE("TestPoolSimpleInit") {
+	std::cout << "TestPoolSimpleInit -> " << std::endl;
+
     std::atomic_int val;
 
     concurrent::Pool<void, int, std::string> simple([] (int a, std::string b){
@@ -38,9 +44,13 @@ TEST_CASE("TestPoolSimpleInit") {
     for (int i = 0; i < 10; i++) {
         simple.Call(1, std::string("test"));
     }
+
+	std::cout << "<- TestPoolSimpleInit" << std::endl;
 }
 
 TEST_CASE("TestPoolPostProcessSimple") {
+	std::cout << "TestPoolPostProcessSimple -> " << std::endl;
+
     concurrent::Pool<double> simple;
 
 	std::function<double (int, std::string)> fun = [](int a, std::string b) {
@@ -55,9 +65,13 @@ TEST_CASE("TestPoolPostProcessSimple") {
 
     simple.Send<int, std::string>(fun, cb, 1, std::string("test")
     );
+
+	std::cout << "<- TestPoolPostProcessSimple" << std::endl;
 }
 
 TEST_CASE("TestPoolSpawnSimple") {
+	std::cout << "TestPoolSpawnSimple -> " << std::endl;
+
     concurrent::Pool<> simple(2);
 
     CHECK(simple.Size() == 2);
@@ -77,9 +91,13 @@ TEST_CASE("TestPoolSpawnSimple") {
     );
 
     REQUIRE(simple.Size() == 4);
+
+	std::cout << "<- TestPoolSpawnSimple" << std::endl;
 }
 
-TEST_CASE("TestPoolDefault", "DefaultPool") {
+/*TEST_CASE("TestPoolDefault", "DefaultPool") {
+	std::cout << "TestMapCallback -> " << std::endl;
+
     concurrent::SystemTaskPool<>().Spawn(
         [] (){
             while (concurrent::SystemTaskPool<>().IsRunning()) {
@@ -88,9 +106,11 @@ TEST_CASE("TestPoolDefault", "DefaultPool") {
             std::cout << "Shutting down default pool.." << std::endl;
         }
     );
-}
+}*/
 
 TEST_CASE("TestPoolProcessing") {
+	std::cout << "TestPoolProcessing -> " << std::endl;
+
     using namespace concurrent;
 
 	Streamer<int> item;
@@ -106,9 +126,13 @@ TEST_CASE("TestPoolProcessing") {
 	}
 	input->Close();
 	result->Close();
+
+	std::cout << "<- TestPoolProcessing" << std::endl;
 }
 
 TEST_CASE("TestPoolFilter") {
+	std::cout << "TestPoolFilter -> " << std::endl;
+
 	using namespace concurrent;
 
 	Streamer<int> item;
@@ -125,9 +149,13 @@ TEST_CASE("TestPoolFilter") {
 	input->Close();
 	result->Output()->Close();
 	result->Close();
+
+	std::cout << "<- TestPoolFilter" << std::endl;
 }
 
 TEST_CASE("TestPoolSimpleClass") {
+	std::cout << "TestPoolSimpleClass -> " << std::endl;
+
 	using namespace concurrent;
 
 	class Test {
@@ -156,4 +184,6 @@ TEST_CASE("TestPoolSimpleClass") {
 	auto output = result->Output();
 	output->Wait();
 	result->Close();
+
+	std::cout << "<- TestPoolSimpleClass" << std::endl;
 }

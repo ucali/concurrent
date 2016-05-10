@@ -253,7 +253,7 @@ private:
 
 template <typename R = void>
 inline Pool<R>& SystemTaskPool() {
-    static Pool<R> pool(1);
+    static Pool<R> pool;
     return pool;
 }
 
@@ -282,14 +282,27 @@ public:
     typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
         typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out, _pool));
 
-        _pool->Send([item, fn] {
-			auto output = item->Output();
-            while (item->Input()->CanReceive()) {
-                auto ret = fn(item->Input()->Pop());
-				output->Insert(ret.first, ret.second);
-            }
-			output->Close();
-        });
+		WaitGroup::Ptr wg(new WaitGroup(2));
+
+        _pool->Send([item, fn, wg] {
+			try {
+				auto output = item->Output();
+				while (item->Input()->CanReceive()) { 
+					auto ret = fn(item->Input()->Pop());
+					output->Insert(ret.first, ret.second);
+				}
+				wg->Finish();
+			} catch (const std::exception& e) {
+				wg->Finish();
+				throw;
+			}
+        }, 2);
+
+		_pool->Send([item, wg] {
+			wg->Wait();
+
+			item->Output()->Close();
+		});
 
         return item;
     }
@@ -302,14 +315,19 @@ public:
         typename Bouncer<_I>::Ptr item(new Bouncer<_I>(_out, _pool));
 		
 		_pool->Send([item, fn] {
-            while (item->Input()->CanReceive()) {
-                auto val = item->Input()->Pop();
-                auto ret = fn(val);
-                if (ret) {
-                    item->Output()->Push(val);
-                }
-            }
-			item->Output()->Close();
+			try {
+				while (item->Input()->CanReceive()) {
+					auto val = item->Input()->Pop();
+					auto ret = fn(val);
+					if (ret) {
+						item->Output()->Push(val);
+					}
+				}
+				item->Output()->Close();
+			} catch (const std::exception& e) {
+				item->Output()->Close();
+				throw;
+			}
         });
 
 		return item;
@@ -323,12 +341,18 @@ public:
         typename Collector<_K, _V, _O>::Ptr item(new Collector<_K, _V, _O>(_out, _pool));
 
         _pool->Send([item, fn] {
-            item->Input()->Wait();
-			item->Input()->ForEach([item, fn] (const std::pair<_K, _V>& pair) {
-				auto o = fn(pair.first, pair.second);
-				item->Output()->Push(o);
-			});
-		
+			try {
+				item->Input()->Wait();
+				item->Input()->ForEach([item, fn](const std::pair<_K, _V>& pair) {
+					auto o = fn(pair.first, pair.second);
+					item->Output()->Push(o);
+				});
+				item->Output()->Close();
+			} catch (const std::exception& e) {
+				item->Output()->Close();
+				throw;
+			}
+
 		}, 2);
 
 		return item;
