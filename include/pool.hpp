@@ -84,17 +84,14 @@ public:
 
     void Finish() {
         _group.Pop();
-        if (!_group.Size()) {
-            _empty.notify_all();
-        }
+        _empty.notify_all();
     }
 
     void Wait() {
-		if (!_group.Size()) {
-			return;
+		while (_group.Size()) {
+			std::unique_lock<std::mutex> lock(_mutex);
+			_empty.wait(lock);
 		}
-        std::unique_lock<std::mutex> lock(_mutex);
-        _empty.wait(lock);
     }
 
 private:
@@ -270,6 +267,7 @@ public:
 	_StreamItem(typename I::Ptr i, typename Pool<void, _Args...>::Ptr p) : _in(i), _out(new O()) { _pool = p; }
 
 	~_StreamItem() {
+		_in->Close();
 	}
 
     typename I::Ptr Input() { return _in; }
@@ -279,10 +277,10 @@ public:
 	using Mapper = _StreamItem<SyncQueue<_I>, SyncMap<_K, _V>>;
 
     template <typename _I, typename _K, typename _V>
-    typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn) {
+    typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn, size_t s = 2) {
         typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out, _pool));
 
-		WaitGroup::Ptr wg(new WaitGroup(2));
+		WaitGroup::Ptr wg(new WaitGroup(s));
 
         _pool->Send([item, fn, wg] {
 			try {
@@ -296,7 +294,7 @@ public:
 				wg->Finish();
 				throw;
 			}
-        }, 2);
+        }, s);
 
 		_pool->Send([item, wg] {
 			wg->Wait();
@@ -311,10 +309,12 @@ public:
 	using Bouncer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
 
 	template <typename _I>
-	typename Bouncer<_I>::Ptr Filter(const std::function<bool (_I)>& fn) { 
+	typename Bouncer<_I>::Ptr Filter(const std::function<bool (_I)>& fn, size_t s = 1) { 
         typename Bouncer<_I>::Ptr item(new Bouncer<_I>(_out, _pool));
 		
-		_pool->Send([item, fn] {
+		WaitGroup::Ptr wg(new WaitGroup(s));
+
+		_pool->Send([item, fn, wg] {
 			try {
 				while (item->Input()->CanReceive()) {
 					auto val = item->Input()->Pop();
@@ -323,12 +323,18 @@ public:
 						item->Output()->Push(val);
 					}
 				}
-				item->Output()->Close();
+				wg->Finish();
 			} catch (const std::exception& e) {
-				item->Output()->Close();
+				wg->Finish();
 				throw;
 			}
         });
+
+		_pool->Send([item, wg] {
+			wg->Wait();
+
+			item->Output()->Close();
+		});
 
 		return item;
 	}
@@ -352,7 +358,6 @@ public:
 				item->Output()->Close();
 				throw;
 			}
-
 		}, 2);
 
 		return item;
@@ -360,6 +365,14 @@ public:
 	
 	void Close() {
 		_pool->Close();
+	}
+
+	template <typename C> 
+	void Stream(const C& c) {
+		for (const auto& item : c) {
+			_in->Push(item);
+		}
+		_in->Close();
 	}
 
 private:

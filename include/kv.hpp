@@ -99,6 +99,9 @@ template <typename _K, typename _V>
 using SyncMap = _SyncMap<std::map<_K, _V>, _K, _V>;
 
 template <typename _K, typename _V>
+using SyncMultiMap = _SyncMap<std::multimap<_K, _V>, _K, _V>;
+
+template <typename _K, typename _V>
 using SyncHashMap = _SyncMap<std::map<_K, _V>, _K, _V>;
 
 }

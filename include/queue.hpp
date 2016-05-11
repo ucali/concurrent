@@ -34,12 +34,19 @@ public:
 
     inline void Close() { std::unique_lock<std::mutex> lock(_mutex); _closed = true; _empty.notify_all(); }
 
-    inline bool IsClosed() const { std::unique_lock<std::mutex> lock(_mutex); return _closed; }
-    inline bool IsOpen() const { std::unique_lock<std::mutex> lock(_mutex); return !_closed; }
-    inline bool CanReceive() const {
-        std::unique_lock<std::mutex> lock(_mutex);
-        return !_closed || _queue.size();
-    }
+	void Wait() {
+		std::unique_lock<std::mutex> lock(_mutex);
+		if (!_closed) {
+			_full.wait(lock);
+		}
+	}
+
+	inline bool IsClosed() const { std::unique_lock<std::mutex> lock(_mutex); return _closed; }
+	inline bool IsOpen() const { std::unique_lock<std::mutex> lock(_mutex); return !_closed; }
+	inline bool CanReceive() const {
+		std::unique_lock<std::mutex> lock(_mutex);
+		return !_closed || _queue.size();
+	}
 
 protected:
     T& First() { return _queue.front(); }

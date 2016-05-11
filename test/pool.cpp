@@ -155,35 +155,41 @@ TEST_CASE("TestPoolFilter") {
 
 TEST_CASE("TestPoolSimpleClass") {
 	std::cout << "TestPoolSimpleClass -> " << std::endl;
+	while (true) {
 
-	using namespace concurrent;
+		using namespace concurrent;
 
-	class Test {
-	public:
-		Test() {}
-		Test(int64_t i, bool s, std::string v) : id(i), status(s), val(v) { }
+		class Test {
+		public:
+			Test() {}
+			Test(int64_t i, bool s, std::string v) : id(i), status(s), val(v) { }
 
-		int64_t id = 0;
-		bool status = true;
-		std::string val = "hello";
-	};
+			int64_t id = 0;
+			bool status = true;
+			std::string val = "hello";
+		};
 
-	Streamer<Test> item;
-	auto result = item.Filter<Test>([](Test k) {
-		return k.status == true;
-	})->Map<Test, int64_t, Test>([](Test t) {
-		return std::move(std::pair<int64_t, Test>(t.id, t));
-	});
+		std::vector<Test> input;
+		for (int i = 0; i < 100000; i++) {
+			input.push_back({ i, i % 2 == 0, "hello world" });
+		}
 
-	auto input = item.Input();
-	for (int i = 0; i < 1000; i++) {
-		input->Push({i, i % 2 == 0, "hello world"}); 
+
+		//Stream some data:
+		Streamer<Test> item;
+		auto result = item.Filter<Test>([](Test k) {
+			return k.status == true;
+		})->Map<Test, int64_t, Test>([](Test t) {
+			return std::move(std::pair<int64_t, Test>(t.id, t));
+		});
+
+		item.Stream(input);
+
+		auto output = result->Output();
+		output->Wait();
+		result->Close();
+		REQUIRE(output->Size() == 50000);
 	}
-	input->Close();
-
-	auto output = result->Output();
-	output->Wait();
-	result->Close();
 
 	std::cout << "<- TestPoolSimpleClass" << std::endl;
 }

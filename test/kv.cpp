@@ -93,18 +93,22 @@ TEST_CASE("TestMapPipeline") {
 
     pool.Send([in, out, wg] {
         wg->Wait();
+		out->Close();
     });
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 10000; i++) {
         in->Push(i);
     }
     in->Close();
 
+	out->Wait();
 	out->ForEach([](const std::pair<int, int>&) {
 		
 	});
 
+	REQUIRE(out->Size() == 10000);
 	out->Clear();
+	REQUIRE(out->Size() == 0);
 
 	std::cout << "<- TestMapPipeline" << std::endl;
 }
