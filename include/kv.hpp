@@ -17,7 +17,7 @@ public:
 	typedef std::shared_ptr<_SyncMap<_M, _K, _V>> Ptr;
 
 	_SyncMap() {}
-	virtual ~_SyncMap() { Close(); }
+	~_SyncMap() { Close(); }
 
     void Insert(const _K& k, const _V& v) {
         std::unique_lock<std::mutex> lock(_mutex);

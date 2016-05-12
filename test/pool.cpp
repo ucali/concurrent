@@ -95,7 +95,7 @@ TEST_CASE("TestPoolSpawnSimple") {
 	std::cout << "<- TestPoolSpawnSimple" << std::endl;
 }
 
-/*TEST_CASE("TestPoolDefault", "DefaultPool") {
+TEST_CASE("TestPoolDefault", "DefaultPool") {
 	std::cout << "TestMapCallback -> " << std::endl;
 
     concurrent::SystemTaskPool<>().Spawn(
@@ -106,116 +106,5 @@ TEST_CASE("TestPoolSpawnSimple") {
             std::cout << "Shutting down default pool.." << std::endl;
         }
     );
-}*/
-
-TEST_CASE("TestPoolProcessing") {
-	std::cout << "TestPoolProcessing -> " << std::endl;
-
-    using namespace concurrent;
-
-	Streamer<int> item;
-    auto result = item.Map<int, int, int>([] (int i) {
-        return std::move(std::pair<int, int>(i, i));
-    })->Collect<int, int, int>([](int k, int v) {
-		return k + v;
-	});
-
-	auto input = item.Input();
-	for (int i = 0; i < 1000; i++) {
-		input->Push(i);
-	}
-	input->Close();
-	result->Close();
-
-	std::cout << "<- TestPoolProcessing" << std::endl;
 }
 
-TEST_CASE("TestPoolFilter") {
-	std::cout << "TestPoolFilter -> " << std::endl;
-
-	using namespace concurrent;
-
-	Streamer<int> item;
-	auto result = item.Filter<int>([](int k) {
-		return k < 50;
-	})->Map<int, int, int>([](int i) {
-		return std::move(std::pair<int, int>(i, i));
-	});
-
-	auto input = item.Input();
-	for (int i = 0; i < 1000; i++) {
-		input->Push(i);
-	}
-	input->Close();
-	result->Output()->Close();
-	result->Close();
-
-	std::cout << "<- TestPoolFilter" << std::endl;
-}
-
-TEST_CASE("TestPoolSimpleClass") {
-	std::cout << "TestPoolSimpleClass -> " << std::endl;
-
-	using namespace concurrent;
-
-	class Test {
-	public:
-		Test() {}
-		Test(int64_t i, bool s, std::string v) : id(i), status(s), val(v) { }
-
-		int64_t id = 0;
-		bool status = true;
-		std::string val = "hello";
-	};
-
-	std::vector<Test> input;
-	for (int i = 0; i < 100000; i++) {
-		input.push_back({ i, i % 2 == 0, "hello world" });
-	}
-
-
-	//Stream some data:
-	Streamer<Test> item;
-	auto result = item.Filter<Test>([](Test k) {
-		return k.status == true;
-	}, 4)->Map<Test, int64_t, Test>([](Test t) {
-		return std::move(std::pair<int64_t, Test>(t.id, t));
-	}, 4);
-
-	item.Stream(input);
-
-	auto output = result->Output();
-	output->Wait();
-	result->Close();
-	REQUIRE(output->Size() == 50000);
-
-	std::cout << "<- TestPoolSimpleClass" << std::endl;
-}
-
-
-TEST_CASE("TestPoolConsumer") {
-	using namespace concurrent;
-
-	std::vector<int> input;
-	for (int i = 0; i < 4; i++) {
-		input.push_back(i + 1);
-	}
-
-	std::cout << "TestPoolConsumer -> " << std::endl;
-
-	Streamer<int> item;
-	item.Stream(input);
-	auto ret = item.Reduce<int, int>([](int i, int& res) {
-		return res + i;
-	});
-
-
-	item.Stream(input.begin(), input.end());
-	auto ret2 = item.Map<int, int, int>([](int t) {
-		return std::move(std::pair<int, int>(t, t));
-	})->Reduce<int, int, int>([](int k, int v, int& o) {
-		return o + 1;
-	});
-
-	std::cout << "<- TestPoolConsumer" << std::endl;
-}

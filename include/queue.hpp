@@ -45,7 +45,7 @@ public:
 
 	void Wait() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		if (!_closed) {
+		while (!_closed && _queue.size()) {
 			_full.wait(lock);
 		}
 	}
