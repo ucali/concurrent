@@ -68,6 +68,11 @@ void Task<void>::Exec() { this->_c(); this->_t(); }
 template<typename R>
 void Task<R>::Exec() { this->_t(std::move(this->_c())); }
 
+class _Stub {
+public:
+	typedef std::shared_ptr<_Stub> Ptr;
+};
+
 }
 
 class WaitGroup {
@@ -277,7 +282,7 @@ public:
 	using Mapper = _StreamItem<SyncQueue<_I>, SyncMap<_K, _V>>;
 
     template <typename _I, typename _K, typename _V>
-    typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn, size_t s = 2) {
+    typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V> (_I)>& fn, size_t s = 1) {
         typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
@@ -286,15 +291,19 @@ public:
 			try {
 				auto output = item->Output();
 				while (item->Input()->CanReceive()) { 
-					auto ret = fn(item->Input()->Pop());
-					output->Insert(ret.first, ret.second);
+					try {
+						auto ret = fn(item->Input()->Pop(2000));
+						output->Insert(ret.first, ret.second);
+					} catch (const ex::ClosedQueueException& ex) {
+						std::cerr << ex.what() << std::endl;
+					}
 				}
 				wg->Finish();
 			} catch (const std::exception& e) {
 				wg->Finish();
 				throw;
 			}
-        }, s);
+        }, wg->Size());
 
 		_pool->Send([item, wg] {
 			wg->Wait();
@@ -317,10 +326,14 @@ public:
 		_pool->Send([item, fn, wg] {
 			try {
 				while (item->Input()->CanReceive()) {
-					auto val = item->Input()->Pop();
-					auto ret = fn(val);
-					if (ret) {
-						item->Output()->Push(val);
+					try {
+						auto val = item->Input()->Pop(2000);
+						auto ret = fn(val);
+						if (ret) {
+							item->Output()->Push(val);
+						}
+					} catch (const ex::ClosedQueueException& ex) {
+						std::cerr << ex.what() << std::endl;
 					}
 				}
 				wg->Finish();
@@ -328,7 +341,7 @@ public:
 				wg->Finish();
 				throw;
 			}
-        });
+        }, wg->Size());
 
 		_pool->Send([item, wg] {
 			wg->Wait();
@@ -343,24 +356,68 @@ public:
 	using Collector = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
 
 	template <typename _K, typename _V, typename _O>
-	typename Collector<_K, _V, _O>::Ptr Collect(const std::function<_O(_K, _V)>& fn) {
+	typename Collector<_K, _V, _O>::Ptr Collect(const std::function<_O(_K, _V)>& fn, size_t s = 1) {
         typename Collector<_K, _V, _O>::Ptr item(new Collector<_K, _V, _O>(_out, _pool));
 
-        _pool->Send([item, fn] {
+		WaitGroup::Ptr wg(new WaitGroup(s));
+
+        _pool->Send([item, fn, wg] {
 			try {
 				item->Input()->Wait();
 				item->Input()->ForEach([item, fn](const std::pair<_K, _V>& pair) {
 					auto o = fn(pair.first, pair.second);
 					item->Output()->Push(o);
 				});
-				item->Output()->Close();
+
+				wg->Finish();
 			} catch (const std::exception& e) {
-				item->Output()->Close();
+				wg->Finish();
 				throw;
 			}
-		}, 2);
+		}, wg->Size());
+
+		_pool->Send([item, wg] {
+			wg->Wait();
+
+			item->Output()->Close();
+		});
 
 		return item;
+	}
+
+	template <typename _K, typename _V, typename _O>
+	_O Reduce(const std::function<_O (_K, _V, _O&)>& fn) { 
+		std::promise<_O> promise;
+		auto result = promise.get_future();
+
+		this->Output()->Wait();
+		_pool->Send([this, &promise, &fn] {
+			_O o = _O();
+			this->Output()->ForEach([&o, &fn](const std::pair<_K, _V>& pair)  {
+				o = fn(pair.first, pair.second, o);
+			});
+
+			promise.set_value(o);
+		});
+
+		return result.get(); 
+	}
+
+	template <typename _I, typename _O>
+	_O Reduce(const std::function<_O(_I, _O&)>& fn) {
+		std::promise<_O> promise;
+		auto result = promise.get_future();
+
+		_pool->Send([this, &promise, &fn] {
+			_O o = _O();
+			while (Input()->CanReceive()) {
+				o = fn(Input()->Pop(), o);
+			}
+
+			promise.set_value(o);
+		});
+
+		return result.get();
 	}
 	
 	void Close() {
@@ -371,6 +428,14 @@ public:
 	void Stream(const C& c) {
 		for (const auto& item : c) {
 			_in->Push(item);
+		}
+		_in->Close();
+	}
+
+	template <typename Iter>
+	void Stream(Iter b, Iter e) {
+		for (; b != e; b++) {
+			_in->Push(*b);
 		}
 		_in->Close();
 	}

@@ -178,9 +178,9 @@ TEST_CASE("TestPoolSimpleClass") {
 	Streamer<Test> item;
 	auto result = item.Filter<Test>([](Test k) {
 		return k.status == true;
-	})->Map<Test, int64_t, Test>([](Test t) {
+	}, 4)->Map<Test, int64_t, Test>([](Test t) {
 		return std::move(std::pair<int64_t, Test>(t.id, t));
-	});
+	}, 4);
 
 	item.Stream(input);
 
@@ -190,4 +190,32 @@ TEST_CASE("TestPoolSimpleClass") {
 	REQUIRE(output->Size() == 50000);
 
 	std::cout << "<- TestPoolSimpleClass" << std::endl;
+}
+
+
+TEST_CASE("TestPoolConsumer") {
+	using namespace concurrent;
+
+	std::vector<int> input;
+	for (int i = 0; i < 4; i++) {
+		input.push_back(i + 1);
+	}
+
+	std::cout << "TestPoolConsumer -> " << std::endl;
+
+	Streamer<int> item;
+	item.Stream(input);
+	auto ret = item.Reduce<int, int>([](int i, int& res) {
+		return res + i;
+	});
+
+
+	item.Stream(input.begin(), input.end());
+	auto ret2 = item.Map<int, int, int>([](int t) {
+		return std::move(std::pair<int, int>(t, t));
+	})->Reduce<int, int, int>([](int k, int v, int& o) {
+		return o + 1;
+	});
+
+	std::cout << "<- TestPoolConsumer" << std::endl;
 }

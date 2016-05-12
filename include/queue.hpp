@@ -9,6 +9,15 @@
 
 namespace concurrent {
 
+namespace ex {
+
+class ClosedQueueException : public std::runtime_error {
+public:
+	ClosedQueueException(std::string s) : std::runtime_error(s) {}
+};
+
+}
+
 template <typename T>
 class SyncQueue {
 public:
@@ -78,7 +87,7 @@ T SyncQueue<T>::Pop() {
         while (_queue.size() == 0) {
             if (_closed) { 
                 _full.notify_all();
-				throw std::logic_error("reading from closed queue."); 
+				throw ex::ClosedQueueException("Pop: closed queue"); 
 			}
 
             _empty.wait(lock);
@@ -100,6 +109,9 @@ T SyncQueue<T>::Pop(uint64_t ms) {
         std::unique_lock<std::mutex> lock(_mutex);
         if (_queue.size() == 0) {
             if (_empty.wait_for(lock, std::chrono::milliseconds(ms)) == std::cv_status::timeout) {
+				if (_closed) {
+					throw ex::ClosedQueueException("Pop: closed queue");
+				}
                 return T();
             }
 
