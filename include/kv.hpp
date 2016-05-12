@@ -67,16 +67,14 @@ public:
     void Close() {
 		{
 			std::unique_lock<std::mutex> lock(_mutex);
-			if (_opened) {
-				_opened = false;
-			}
+			_opened = false;
 		}
 		_waiter.notify_all();
     }
 
     void Wait() {
         std::unique_lock<std::mutex> lock(_mutex);
-		if (_opened) {
+		while (_opened) {
 			_waiter.wait(lock);
 		}
     }
