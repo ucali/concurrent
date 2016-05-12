@@ -144,8 +144,8 @@ public:
 		std::promise<_O> promise;
 		auto result = promise.get_future();
 
-		this->Output()->Wait();
 		_pool->Send([this, &promise, &fn] {
+			this->Output()->Wait();
 			_O o = _O();
 			this->Output()->ForEach([&o, &fn](const std::pair<_K, _V>& pair) {
 				o = fn(pair.first, pair.second, o);
