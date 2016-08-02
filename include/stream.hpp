@@ -27,12 +27,12 @@ public:
 	typename I::Ptr Input() { return _in; }
 	typename O::Ptr Output() { return _out; }
 
-	template <typename _I, typename _K, typename _V>
-	using Mapper = _StreamItem<SyncQueue<_I>, SyncMap<_K, _V>>;
+	template <typename _M, typename _I, typename _K, typename _V>
+	using _Mapper = _StreamItem<SyncQueue<_I>, _SyncMap<_M, _K, _V>>;
 
-	template <typename _I, typename _K, typename _V>
-	typename Mapper<_I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V>(_I)>& fn, size_t s = 1) {
-		typename Mapper<_I, _K, _V>::Ptr item(new Mapper<_I, _K, _V>(_out, _pool));
+	template <typename _M, typename _I, typename _K, typename _V>
+	typename _Mapper<_M, _I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V>(_I)>& fn, size_t s = 1) {
+		typename _Mapper<_M, _I, _K, _V>::Ptr item(new _Mapper<_M, _I, _K, _V>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
 
@@ -105,12 +105,12 @@ public:
 		return item;
 	}
 
-	template <typename _K, typename _V, typename _O>
-	using Collector = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
+	template <typename _M, typename _K, typename _V, typename _O>
+	using _Collector = _StreamItem<_SyncMap<_M, _K, _V>, SyncQueue<_O>>;
 
-	template <typename _K, typename _V, typename _O>
-	typename Collector<_K, _V, _O>::Ptr Collect(const std::function<_O(_K, _V)>& fn, size_t s = 1) {
-		typename Collector<_K, _V, _O>::Ptr item(new Collector<_K, _V, _O>(_out, _pool));
+	template <typename _M, typename _K, typename _V, typename _O >
+	typename _Collector<_M, _K, _V, _O>::Ptr Collect(const std::function<_O(_K, _V)>& fn, size_t s = 1) {
+		typename _Collector<_M, _K, _V, _O>::Ptr item(new _Collector<_M, _K, _V, _O>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
 
@@ -148,13 +148,13 @@ public:
 			this->Output()->Wait();
 			_O o = _O();
 			this->Output()->ForEach([&o, &fn](const std::pair<_K, _V>& pair) {
-				o = fn(pair.first, pair.second, o);
+				o = std::move(fn(pair.first, pair.second, o));
 			});
 
 			promise.set_value(o);
 		});
 
-		return result.get();
+		return std::move(result.get());
 	}
 
 	template <typename _I, typename _O>
@@ -216,11 +216,17 @@ using Streamer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
 template <typename _I, typename _K, typename _V>
 using Mapper = _StreamItem<SyncQueue<_I>, SyncMap<_K, _V>>;
 
+template <typename _I, typename _K, typename _V>
+using MultiMapper = _StreamItem<SyncQueue<_I>, SyncMultiMap<_K, _V>>;
+
 template <typename _I>
 using Bouncer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
 
 template <typename _K, typename _V, typename _O>
 using Collector = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
+
+template <typename _K, typename _V, typename _O>
+using MultiCollector = _StreamItem<SyncMultiMap<_K, _V>, SyncQueue<_O>>;
 
 template <typename _I, typename _O>
 using Reducer = _StreamItem<SyncQueue<_I>, _O>;

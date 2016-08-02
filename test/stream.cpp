@@ -10,14 +10,15 @@ TEST_CASE("TestPoolProcessing") {
     using namespace concurrent;
 
 	Streamer<int> item;
-    auto result = item.Map<int, int, int>([] (int i) {
+    auto result = item.Map<std::multimap<int, int>, int, int, int>([] (int i) {
         return std::move(std::pair<int, int>(i, i));
-    })->Collect<int, int, int>([](int k, int v) {
+    })->Collect<std::multimap<int, int>, int, int, int>([](int k, int v) {
 		return k + v;
 	});
 
 	auto input = item.Input();
 	for (int i = 0; i < 1000; i++) {
+		input->Push(i);
 		input->Push(i);
 	}
 	input->Close();
@@ -34,8 +35,8 @@ TEST_CASE("TestPoolFilter") {
 	Streamer<int> item;
 	auto result = item.Filter<int>([](int k) {
 		return k < 50;
-	})->Map<int, int, int>([](int i) {
-		return std::move(std::pair<int, int>(i, i));
+	})->Map<std::map<int, int>, int, int, int>([](int i) {
+		return std::move(std::make_pair(i, i));
 	});
 
 	auto input = item.Input();
@@ -69,14 +70,11 @@ TEST_CASE("TestPoolSimpleClass") {
 	}
 
 	//Stream some data:
-	Streamer<Test> item(input.begin(), input.end());
-	auto result = item.Filter<Test>([](Test k) {
+	auto result = Streamer<Test>(input.begin(), input.end()).Filter<Test>([](Test k) {
 		return k.status == true;
-	}, 4)->Map<Test, int64_t, Test>([](Test t) {
+	}, 4)->Map<std::map<int64_t, Test>, Test, int64_t, Test>([](Test t) {
 		return std::move(std::pair<int64_t, Test>(t.id, t));
 	}, 4);
-
-	//output->Wait();
 
 	auto count = result->Reduce<int64_t, Test, size_t>([] (int64_t v, Test t, size_t& s) {
 		return s + 1;
@@ -109,8 +107,8 @@ TEST_CASE("TestPoolConsumer") {
 	REQUIRE(ret == 10);
 
 	item.Stream(input.begin(), input.end());
-	auto ret2 = item.Map<int, int, int>([](int t) {
-		return std::move(std::pair<int, int>(t, t));
+	auto ret2 = item.Map<std::map<int, int>, int, int, int>([](int t) {
+		return std::move(std::make_pair(t, t));
 	})->Reduce<int, int, int>([](int k, int v, int& o) {
 		return o + 1;
 	});

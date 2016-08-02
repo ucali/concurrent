@@ -21,12 +21,7 @@ public:
 
     void Insert(const _K& k, const _V& v) {
         std::unique_lock<std::mutex> lock(_mutex);
-        _map.insert(std::pair<_K, _V>(k, v));
-    }
-
-    const _V& Get(const _K& k) const {
-        std::unique_lock<std::mutex> lock(_mutex);
-        return _map.at(k);
+        _map.insert(std::make_pair(k, v));
     }
 
     bool Remove(const _K& k) {
@@ -40,14 +35,24 @@ public:
         return true;
     }
 
-    bool Find(const _K& k) {
+    auto Find(const _K& k) {
         std::unique_lock<std::mutex> lock(_mutex);
-        auto it = _map.find(k);
-        if (it == _map.end()) {
-            return false;
-        }
-        return true;
+        return _map.find(k);
     }
+
+	auto End() {
+		std::unique_lock<std::mutex> lock(_mutex);
+		return _map.end();
+	}
+
+	bool Contains(const _K& k) {
+		std::unique_lock<std::mutex> lock(_mutex);
+		auto it = _map.find(k);
+		if (it == _map.end()) {
+			return false;
+		}
+		return true;
+	}
 
     void Clear() {
         std::unique_lock<std::mutex> lock(_mutex);
@@ -79,7 +84,7 @@ public:
 		}
     }
 
-private:
+protected:
 	bool _opened = true;
 	
     mutable std::mutex _mutex;
@@ -97,10 +102,10 @@ template <typename _K, typename _V>
 using SyncMap = _SyncMap<std::map<_K, _V>, _K, _V>;
 
 template <typename _K, typename _V>
-using SyncMultiMap = _SyncMap<std::multimap<_K, _V>, _K, _V>;
+using SyncHashMap = _SyncMap<std::unordered_map<_K, _V>, _K, _V>;
 
 template <typename _K, typename _V>
-using SyncHashMap = _SyncMap<std::map<_K, _V>, _K, _V>;
+using SyncMultiMap = _SyncMap<std::multimap<_K, _V>, _K, _V>;
 
 }
 
