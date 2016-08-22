@@ -11,20 +11,24 @@ namespace concurrent {
 
 namespace {
 
-template <typename _M, typename _K, typename _V>
+template <typename _M>
 class _SyncMap {
 public:
-	typedef std::shared_ptr<_SyncMap<_M, _K, _V>> Ptr;
+	typedef typename _M::key_type KeyType;
+	typedef typename _M::mapped_type ValueType;
+	typedef typename _M::value_type PairType;
+
+	typedef std::shared_ptr<_SyncMap<_M>> Ptr;
 
 	_SyncMap() {}
 	~_SyncMap() { Close(); }
 
-    void Insert(const _K& k, const _V& v) {
+    void Insert(const KeyType& k, const ValueType& v) {
         std::unique_lock<std::mutex> lock(_mutex);
         _map.insert(std::make_pair(k, v));
     }
 
-    bool Remove(const _K& k) {
+    bool Remove(const KeyType& k) {
         std::unique_lock<std::mutex> lock(_mutex);
         auto it = _map.find(k);
         if (it == _map.end()) {
@@ -35,7 +39,7 @@ public:
         return true;
     }
 
-    auto Find(const _K& k) {
+    auto Find(const KeyType& k) {
         std::unique_lock<std::mutex> lock(_mutex);
         return _map.find(k);
     }
@@ -45,7 +49,7 @@ public:
 		return _map.end();
 	}
 
-	bool Contains(const _K& k) {
+	bool Contains(const KeyType& k) {
 		std::unique_lock<std::mutex> lock(_mutex);
 		auto it = _map.find(k);
 		if (it == _map.end()) {
@@ -64,7 +68,7 @@ public:
         return _map.size();
     }
 
-	void ForEach(const std::function<void(const std::pair<_K, _V>&)>& fn) const {
+	void ForEach(const std::function<void(const std::pair<KeyType, ValueType>&)>& fn) const {
 		std::unique_lock<std::mutex> lock(_mutex);
 		std::for_each(_map.begin(), _map.end(), fn);
 	}
@@ -99,13 +103,13 @@ protected:
 }
 
 template <typename _K, typename _V>
-using SyncMap = _SyncMap<std::map<_K, _V>, _K, _V>;
+using SyncMap = _SyncMap<std::map<_K, _V>>;
 
 template <typename _K, typename _V>
-using SyncHashMap = _SyncMap<std::unordered_map<_K, _V>, _K, _V>;
+using SyncHashMap = _SyncMap<std::unordered_map<_K, _V>>;
 
 template <typename _K, typename _V>
-using SyncMultiMap = _SyncMap<std::multimap<_K, _V>, _K, _V>;
+using SyncMultiMap = _SyncMap<std::multimap<_K, _V>>;
 
 }
 

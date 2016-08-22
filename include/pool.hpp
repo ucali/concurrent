@@ -126,9 +126,15 @@ public:
 	~Pool() {  Close(); }
 
     bool IsRunning() const { return _guard.load(); }
-    size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _threads.size(); }
+    size_t Size() const { 
+		std::unique_lock<std::mutex> lock(_mutex); 
+		return _threads.size(); 
+	}
 
-	void OnException(const std::function<void(const std::exception&)>& f) { _ee = f; }
+	void OnException(const std::function<void(const std::exception&)>& f) { 
+		std::unique_lock<std::mutex> lock(_mutex);
+		_ee = f; 
+	}
 
     template <typename ..._Args>
     void Spawn(const std::function<void (_Args...)>& c, _Args... args) {
@@ -214,26 +220,32 @@ public:
 		}
     }
 
+	void Add(size_t s) {
+		auto func = [this] {
+			while (IsRunning()) {
+				try {
+					auto h = _msgQ.Pop();
+					if (h != nullptr) {
+						h->Exec();
+					}
+				}
+				catch (const std::exception& e) {
+					std::unique_lock<std::mutex> lock(_mutex);
+					_ee(e);
+				}
+			}
+		};
+
+		for (int i = 0; i < s; i++) {
+			_threads.emplace_back(func);
+		}
+	}
+
 private:
     void init(size_t s) noexcept {
         _guard.store(true);
 
-        auto func = [this] {
-            while (IsRunning()) {
-				try {
-					auto h = _msgQ.Pop();
-					if (h != nullptr) {
-                        h->Exec();
-					}
-				} catch (const std::exception& e) {
-					_ee(e);
-				}
-            }
-        };
-
-        for (int i = 0; i < s; i++) {
-            _threads.emplace_back(func);
-        }
+		Add(s);
 
         _ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
     }

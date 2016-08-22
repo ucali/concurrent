@@ -27,12 +27,12 @@ public:
 	typename I::Ptr Input() { return _in; }
 	typename O::Ptr Output() { return _out; }
 
-	template <typename _M, typename _I, typename _K, typename _V>
-	using _Mapper = _StreamItem<SyncQueue<_I>, _SyncMap<_M, _K, _V>>;
+	template <typename _I, typename _M>
+	using _Mapper = _StreamItem<SyncQueue<_I>, _SyncMap<_M>>;
 
-	template <typename _M, typename _I, typename _K, typename _V>
-	typename _Mapper<_M, _I, _K, _V>::Ptr Map(const std::function<std::pair<_K, _V>(_I)>& fn, size_t s = 1) {
-		typename _Mapper<_M, _I, _K, _V>::Ptr item(new _Mapper<_M, _I, _K, _V>(_out, _pool));
+	template <typename _I, typename _M>
+	typename _Mapper<_I, _M>::Ptr Map(const std::function<typename _SyncMap<_M>::PairType (_I)>& fn, size_t s = 1) {
+		typename _Mapper<_I, _M>::Ptr item(new _Mapper<_I, _M>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
 
@@ -41,7 +41,7 @@ public:
 				auto output = item->Output();
 				while (item->Input()->CanReceive()) {
 					try {
-						auto ret = fn(item->Input()->Pop(2000));
+						auto ret = fn(item->Input()->Pop(500));
 						output->Insert(ret.first, ret.second);
 					}
 					catch (const ex::ClosedQueueException& ex) {
@@ -105,19 +105,19 @@ public:
 		return item;
 	}
 
-	template <typename _M, typename _K, typename _V, typename _O>
-	using _Collector = _StreamItem<_SyncMap<_M, _K, _V>, SyncQueue<_O>>;
+	template <typename _M, typename _O>
+	using _Collector = _StreamItem<_SyncMap<_M>, SyncQueue<_O>>;
 
-	template <typename _M, typename _K, typename _V, typename _O >
-	typename _Collector<_M, _K, _V, _O>::Ptr Collect(const std::function<_O(_K, _V)>& fn, size_t s = 1) {
-		typename _Collector<_M, _K, _V, _O>::Ptr item(new _Collector<_M, _K, _V, _O>(_out, _pool));
+	template <typename _M, typename _O >
+	typename _Collector<_M, _O>::Ptr Collect(const std::function < _O(typename _SyncMap<_M>::KeyType, typename _SyncMap<_M>::ValueType) > & fn, size_t s = 1) {
+		typename _Collector<_M, _O>::Ptr item(new _Collector<_M, _O>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
 
 		_pool->Send([item, fn, wg] {
 			try {
 				item->Input()->Wait();
-				item->Input()->ForEach([item, fn](const std::pair<_K, _V>& pair) {
+				item->Input()->ForEach([item, fn](const typename _SyncMap<_M>::PairType& pair) {
 					auto o = fn(pair.first, pair.second);
 					item->Output()->Push(o);
 				});
@@ -213,20 +213,8 @@ private:
 template <typename _I>
 using Streamer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
 
-template <typename _I, typename _K, typename _V>
-using Mapper = _StreamItem<SyncQueue<_I>, SyncMap<_K, _V>>;
-
-template <typename _I, typename _K, typename _V>
-using MultiMapper = _StreamItem<SyncQueue<_I>, SyncMultiMap<_K, _V>>;
-
 template <typename _I>
 using Bouncer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
-
-template <typename _K, typename _V, typename _O>
-using Collector = _StreamItem<SyncMap<_K, _V>, SyncQueue<_O>>;
-
-template <typename _K, typename _V, typename _O>
-using MultiCollector = _StreamItem<SyncMultiMap<_K, _V>, SyncQueue<_O>>;
 
 template <typename _I, typename _O>
 using Reducer = _StreamItem<SyncQueue<_I>, _O>;

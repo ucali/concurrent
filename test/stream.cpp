@@ -10,9 +10,9 @@ TEST_CASE("TestPoolProcessing") {
     using namespace concurrent;
 
 	Streamer<int> item;
-    auto result = item.Map<std::multimap<int, int>, int, int, int>([] (int i) {
+    auto result = item.Map<int, std::multimap<int, int>>([] (int i) {
         return std::move(std::pair<int, int>(i, i));
-    })->Collect<std::multimap<int, int>, int, int, int>([](int k, int v) {
+    })->Collect<std::multimap<int, int>, int>([](int k, int v) {
 		return k + v;
 	});
 
@@ -35,7 +35,7 @@ TEST_CASE("TestPoolFilter") {
 	Streamer<int> item;
 	auto result = item.Filter<int>([](int k) {
 		return k < 50;
-	})->Map<std::map<int, int>, int, int, int>([](int i) {
+	})->Map<int, std::map<int, int>>([](int i) {
 		return std::move(std::make_pair(i, i));
 	});
 
@@ -65,25 +65,25 @@ TEST_CASE("TestPoolSimpleClass") {
 	};
 
 	std::vector<Test> input;
-	for (int i = 0; i < 100000; i++) {
+	for (int i = 0; i < 10000000; i++) {
 		input.push_back({ i, i % 2 == 0, "hello world" });
 	}
 
 	//Stream some data:
-	auto result = Streamer<Test>(input.begin(), input.end()).Filter<Test>([](Test k) {
+	auto result = Streamer<Test>(input.begin(), input.end(), 8).Filter<Test>([](Test k) {
 		return k.status == true;
-	}, 4)->Map<std::map<int64_t, Test>, Test, int64_t, Test>([](Test t) {
+	}, /*TODO: fix*/2)->Map<Test, std::map<int64_t, Test>>([](Test t) {
 		return std::move(std::pair<int64_t, Test>(t.id, t));
-	}, 4);
+	}, 2);
 
 	auto count = result->Reduce<int64_t, Test, size_t>([] (int64_t v, Test t, size_t& s) {
 		return s + 1;
 	});
-	REQUIRE(count == 50000);
+	REQUIRE(count == 5000000);
 
 	auto output = result->Output();
 	result->Close();
-	REQUIRE(output->Size() == 50000);
+	REQUIRE(output->Size() == 5000000);
 
 	std::cout << "<- TestPoolSimpleClass" << std::endl;
 }
@@ -107,7 +107,7 @@ TEST_CASE("TestPoolConsumer") {
 	REQUIRE(ret == 10);
 
 	item.Stream(input.begin(), input.end());
-	auto ret2 = item.Map<std::map<int, int>, int, int, int>([](int t) {
+	auto ret2 = item.Map<int, std::map<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
 	})->Reduce<int, int, int>([](int k, int v, int& o) {
 		return o + 1;
