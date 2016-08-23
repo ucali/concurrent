@@ -93,10 +93,10 @@ public:
     }
 
     void Wait() {
-		while (_group.Size()) {
-			std::unique_lock<std::mutex> lock(_mutex);
-			_empty.wait(lock);
-		}
+	std::unique_lock<std::mutex> lock(_mutex);
+	while (_group.Size()) {
+		_empty.wait(lock);
+	}
     }
 
 private:
