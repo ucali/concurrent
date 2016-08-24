@@ -10,7 +10,7 @@ TEST_CASE("TestPoolProcessing") {
     using namespace concurrent;
 
 	Streamer<int> item;
-    auto result = item.Map<int, std::multimap<int, int>>([] (int i) {
+    auto result = item.Map<std::multimap<int, int>>([] (int i) {
         return std::move(std::pair<int, int>(i, i));
     })->Collect<std::multimap<int, int>, int>([](int k, int v) {
 		return k + v;
@@ -33,9 +33,9 @@ TEST_CASE("TestPoolFilter") {
 	using namespace concurrent;
 
 	Streamer<int> item;
-	auto result = item.Filter<int>([](int k) {
+	auto result = item.Filter([](int k) {
 		return k < 50;
-	})->Map<int, std::map<int, int>>([](int i) {
+	})->Map<std::map<int, int>>([](int i) {
 		return std::move(std::make_pair(i, i));
 	});
 
@@ -49,7 +49,7 @@ TEST_CASE("TestPoolFilter") {
 	std::cout << "<- TestPoolFilter" << std::endl;
 }
 
-TEST_CASE("TestPoolSimpleClass") {
+TEST_CASE("TestPoolClass") {
 	std::cout << "TestPoolSimpleClass -> " << std::endl;
 
 	using namespace concurrent;
@@ -70,13 +70,13 @@ TEST_CASE("TestPoolSimpleClass") {
 	}
 
 	//Stream some data:
-	auto result = Streamer<Test>(input.begin(), input.end(), 8).Filter<Test>([](Test k) {
+	auto result = Streamer<Test>(input.begin(), input.end(), 8).Filter([](Test k) {
 		return k.status == true;
-	}, /*TODO: fix*/2)->Map<Test, std::map<int64_t, Test>>([](Test t) {
+	}, 2)->Map<std::map<int64_t, Test>>([](Test t) {
 		return std::move(std::pair<int64_t, Test>(t.id, t));
 	}, 2);
 
-	auto count = result->Reduce<int64_t, Test, size_t>([] (int64_t v, Test t, size_t& s) {
+	auto count = result->Reduce<size_t>([] (int64_t v, Test t, size_t& s) {
 		return s + 1;
 	});
 	REQUIRE(count == 5000000);
@@ -100,16 +100,16 @@ TEST_CASE("TestPoolConsumer") {
 	std::cout << "TestPoolConsumer -> " << std::endl;
 
 	Streamer<int> item(input.begin(), input.end());
-	auto ret = item.Reduce<int, int>([](int i, int& res) {
+	auto ret = item.Reduce<int>([](int i, int& res) {
 		return res + i;
 	});
 
 	REQUIRE(ret == 10);
 
 	item.Stream(input.begin(), input.end());
-	auto ret2 = item.Map<int, std::map<int, int>>([](int t) {
+	auto ret2 = item.Map<std::map<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
-	})->Reduce<int, int, int>([](int k, int v, int& o) {
+	})->Reduce<int>([](int k, int v, int& o) {
 		return o + 1;
 	});
 

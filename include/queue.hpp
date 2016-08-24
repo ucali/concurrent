@@ -21,6 +21,8 @@ public:
 template <typename T>
 class SyncQueue {
 public:
+	typedef T KeyType; //TODO: fix
+	typedef T ValueType;
 	typedef std::shared_ptr<SyncQueue> Ptr;
 
     SyncQueue(size_t t = 1 << 16) : _maxSize(t), _closed(false) { }

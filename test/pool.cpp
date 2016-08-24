@@ -6,8 +6,8 @@
 #include <assert.h>
 
 
-TEST_CASE("TestPoolSimple") {
-	std::cout << "TestPoolSimple -> " << std::endl;
+TEST_CASE("TestPool") {
+	std::cout << "TestPool -> " << std::endl;
 
     concurrent::Pool<> simple;
 
@@ -28,11 +28,11 @@ TEST_CASE("TestPoolSimple") {
 	};
     simple.Send<std::string, int, double, double>(fn2, std::string("test"), 1, 0.1, 0.1);
 
-	std::cout << "<- TestPoolSimple" << std::endl;
+	std::cout << "<- TestPool" << std::endl;
 }
 
-TEST_CASE("TestPoolSimpleInit") {
-	std::cout << "TestPoolSimpleInit -> " << std::endl;
+TEST_CASE("TestPoolInit") {
+	std::cout << "TestPoolInit -> " << std::endl;
 
     std::atomic_int val;
 
@@ -45,11 +45,11 @@ TEST_CASE("TestPoolSimpleInit") {
         simple.Call(1, std::string("test"));
     }
 
-	std::cout << "<- TestPoolSimpleInit" << std::endl;
+	std::cout << "<- TestPoolInit" << std::endl;
 }
 
-TEST_CASE("TestPoolPostProcessSimple") {
-	std::cout << "TestPoolPostProcessSimple -> " << std::endl;
+TEST_CASE("TestPoolPostProcess") {
+	std::cout << "TestPoolPostProcess -> " << std::endl;
 
     concurrent::Pool<double> simple;
 
@@ -66,11 +66,11 @@ TEST_CASE("TestPoolPostProcessSimple") {
     simple.Send<int, std::string>(fun, cb, 1, std::string("test")
     );
 
-	std::cout << "<- TestPoolPostProcessSimple" << std::endl;
+	std::cout << "<- TestPoolPostProcess" << std::endl;
 }
 
-TEST_CASE("TestPoolSpawnSimple") {
-	std::cout << "TestPoolSpawnSimple -> " << std::endl;
+TEST_CASE("TestPoolSpawn") {
+	std::cout << "TestPoolSpawn -> " << std::endl;
 
     concurrent::Pool<> simple(2);
 
@@ -92,11 +92,11 @@ TEST_CASE("TestPoolSpawnSimple") {
 
     REQUIRE(simple.Size() == 4);
 
-	std::cout << "<- TestPoolSpawnSimple" << std::endl;
+	std::cout << "<- TestPoolSpawn" << std::endl;
 }
 
 TEST_CASE("TestPoolDefault", "DefaultPool") {
-	std::cout << "TestMapCallback -> " << std::endl;
+	std::cout << "TestPoolDefault -> " << std::endl;
 
     concurrent::SystemTaskPool<>().Spawn(
         [] (){

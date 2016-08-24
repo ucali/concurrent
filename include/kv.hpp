@@ -14,6 +14,7 @@ namespace {
 template <typename _M>
 class _SyncMap {
 public:
+	typedef typename _M MapType;
 	typedef typename _M::key_type KeyType;
 	typedef typename _M::mapped_type ValueType;
 	typedef typename _M::value_type PairType;

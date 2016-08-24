@@ -30,9 +30,9 @@ public:
 	template <typename _I, typename _M>
 	using _Mapper = _StreamItem<SyncQueue<_I>, _SyncMap<_M>>;
 
-	template <typename _I, typename _M>
-	typename _Mapper<_I, _M>::Ptr Map(const std::function<typename _SyncMap<_M>::PairType (_I)>& fn, size_t s = 1) {
-		typename _Mapper<_I, _M>::Ptr item(new _Mapper<_I, _M>(_out, _pool));
+	template <typename _M>
+	typename _Mapper<typename O::ValueType, _M>::Ptr Map(const std::function<typename _SyncMap<_M>::PairType (typename O::ValueType)>& fn, size_t s = 1) {
+		typename _Mapper<typename O::ValueType, _M>::Ptr item(new _Mapper<typename O::ValueType, _M>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
 
@@ -65,12 +65,10 @@ public:
 		return item;
 	}
 
-	template <typename _I>
-	using Bouncer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;
+	using Bouncer = _StreamItem<SyncQueue<typename O::ValueType>, SyncQueue<typename O::ValueType>>;
 
-	template <typename _I>
-	typename Bouncer<_I>::Ptr Filter(const std::function<bool(_I)>& fn, size_t s = 1) {
-		typename Bouncer<_I>::Ptr item(new Bouncer<_I>(_out, _pool));
+	typename Bouncer::Ptr Filter(const std::function<bool(typename O::ValueType)>& fn, size_t s = 1) {
+		typename Bouncer::Ptr item(new Bouncer(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
 
@@ -139,15 +137,15 @@ public:
 		return item;
 	}
 
-	template <typename _K, typename _V, typename _O>
-	_O Reduce(const std::function<_O(_K, _V, _O&)>& fn) {
+	template <typename _O>
+	_O Reduce(const std::function<_O (typename O::KeyType, typename O::ValueType, _O&)>& fn) {
 		std::promise<_O> promise;
 		auto result = promise.get_future();
 
 		_pool->Send([this, &promise, &fn] {
 			this->Output()->Wait();
 			_O o = _O();
-			this->Output()->ForEach([&o, &fn](const std::pair<_K, _V>& pair) {
+			this->Output()->ForEach([&o, &fn](const typename O::PairType& pair) {
 				o = std::move(fn(pair.first, pair.second, o));
 			});
 
@@ -157,8 +155,8 @@ public:
 		return std::move(result.get());
 	}
 
-	template <typename _I, typename _O>
-	_O Reduce(const std::function<_O(_I, _O&)>& fn) {
+	template <typename _O>
+	_O Reduce(const std::function<_O(typename O::ValueType, _O&)>& fn) {
 		std::promise<_O> promise;
 		auto result = promise.get_future();
 
