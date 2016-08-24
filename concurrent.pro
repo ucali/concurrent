@@ -17,7 +17,8 @@ CONFIG(debug, debug|release) {
 SOURCES +=  test/main.cpp   \
             test/pool.cpp   \
             test/queue.cpp  \
-    test/kv.cpp
+            test/kv.cpp     \
+            test/stream.cpp
 
 CONFIG(debug, debug|release) {
         TARGET = $$join(TARGET,,,d)
@@ -26,6 +27,7 @@ CONFIG(debug, debug|release) {
 DESTDIR = $$_PRO_FILE_PWD_/bin
 
 HEADERS += \
-    include/pool.hpp \
-    include/queue.hpp \
-    include/kv.hpp
+    include/pool.hpp    \
+    include/queue.hpp   \
+    include/kv.hpp      \
+    include/stream.hpp
