@@ -2,7 +2,7 @@ TEMPLATE = app
 CONFIG -= qt
 CONFIG -= app_bundle
 CONFIG += console
-CONFIG += c++11
+CONFIG += c++14
 
 TARGET = TestConcurrent
 
@@ -12,6 +12,10 @@ INCLUDEPATH += $$_PRO_FILE_PWD_/test/Catch/include
 
 CONFIG(debug, debug|release) {
 } else {
+}
+
+linux {
+    LIBS += -lpthread
 }
 
 SOURCES +=  test/main.cpp   \
