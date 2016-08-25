@@ -93,10 +93,10 @@ public:
     }
 
     void Wait() {
-	std::unique_lock<std::mutex> lock(_mutex);
-	while (_group.Size()) {
-		_empty.wait(lock);
-	}
+		std::unique_lock<std::mutex> lock(_mutex);
+		while (_group.Size()) {
+			_empty.wait(lock);
+		}
     }
 
 private:
@@ -123,7 +123,7 @@ public:
                   size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
     { init(s); }
 
-	~Pool() {  Close(); }
+	~Pool() { Close(); }
 
     bool IsRunning() const { return _guard.load(); }
     size_t Size() const { 
@@ -162,7 +162,7 @@ public:
         auto fun = std::bind(c, args...);
         Task<void>::Ptr ptr(new Task<void>(fun));
 
-        _msgQ.Push(ptr);
+		launch(ptr);
     }
 
     template <typename ..._Args>
@@ -170,19 +170,23 @@ public:
         auto fun = std::bind(c, args...);
         typename Task<R>::Ptr ptr(new Task<R>(fun, t));
 
-        _msgQ.Push(ptr);
+		launch(ptr);
     }
 
-    void Send(const std::function<void ()>& c, size_t num = 1) {
+	void Send(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) {
+		typename Task<R>::Ptr ptr(new Task<R>(c, t));
+		launch(ptr);
+	}
+
+    void Send(const std::function<R ()>& c, size_t num = 1) {
         for (int i = 0; i < num; i++) {
-            _Task<void>::Ptr ptr(new _Task<void>(c));
-            _msgQ.Push(ptr);
-        }
-    }
+            _Task<R>::Ptr ptr(new _Task<R>(c));
 
-    void Send(const std::function<R ()>& c, const typename _func_traits<R>::FuncType& t) {
-        typename Task<R>::Ptr ptr(new Task<R>(c, t));
-        _msgQ.Push(ptr);
+			if (isAlmostFull()) {
+				Add(1);
+			}
+			_msgQ.Push(ptr);
+        }
     }
 
     template <typename ..._Args>
@@ -190,7 +194,7 @@ public:
         auto fun = std::bind(_c, args...);
         typename Task<R>::Ptr ptr(new Task<R>(fun));
 
-        _msgQ.Push(ptr);
+        launch(ptr);
     }
 
     void Close() {
@@ -226,7 +230,9 @@ public:
 				try {
 					auto h = _msgQ.Pop();
 					if (h != nullptr) {
+						_counter++;
 						h->Exec();
+						_counter--;
 					}
 				}
 				catch (const std::exception& e) {
@@ -250,10 +256,25 @@ private:
         _ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
     }
 
+	bool isAlmostFull() {
+		std::unique_lock<std::mutex> lock(_mutex);
+		return _threads.size() - _counter < 2;
+	}
+
+	void launch(typename Task<R>::Ptr ptr) {
+		if (isAlmostFull()) {
+			Add(1);
+		}
+		_msgQ.Push(ptr);
+
+	}
+
     SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;
     std::vector<std::thread> _threads;
 
-    std::atomic_bool _guard;
+    std::atomic_bool _guard = false;
+	std::atomic_int16_t _counter = 0;
+
     mutable std::mutex _mutex;
 
 

@@ -70,7 +70,7 @@ TEST_CASE("TestPoolClass") {
 	}
 
 	//Stream some data:
-	auto result = Streamer<Test>(input.begin(), input.end(), 8).Filter([](Test k) {
+	auto result = Streamer<Test>(input.begin(), input.end()).Filter([](Test k) {
 		return k.status == true;
 	}, 2)->Map<std::map<int64_t, Test>>([](Test t) {
 		return std::move(std::pair<int64_t, Test>(t.id, t));
