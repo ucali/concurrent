@@ -9,8 +9,6 @@
 
 namespace concurrent {
 
-namespace {
-
 template <typename _M>
 class _SyncMap {
 public:
@@ -107,8 +105,6 @@ protected:
 	_SyncMap(_SyncMap const&) = delete;
 	_SyncMap& operator=(_SyncMap const&) = delete;
 };
-
-}
 
 template <typename _K, typename _V>
 using SyncMap = _SyncMap<std::map<_K, _V>>;
