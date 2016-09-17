@@ -1,0 +1,6 @@
+*.suo
+.vscode/.browse.VC.db
+*.exe
+*.ilk
+*.user
+concurrent.pro.user.14d392f

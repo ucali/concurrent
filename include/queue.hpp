@@ -21,9 +21,10 @@ public:
 template <typename T>
 class SyncQueue {
 public:
-	typedef T KeyType; //TODO: fix
-	typedef T ValueType;
 	typedef std::shared_ptr<SyncQueue> Ptr;
+
+	typedef T ValueType;
+	typedef T Type;
 
     SyncQueue(size_t t = 1 << 16) : _maxSize(t), _closed(false) { }
 	~SyncQueue() { }
@@ -62,6 +63,12 @@ public:
 	inline bool CanReceive() const {
 		std::unique_lock<std::mutex> lock(_mutex);
 		return !_closed || _queue.size();
+	}
+
+	void ForEach(const std::function<void(const Type&)>& fn) {
+		while (CanReceive()) {
+			fn(Pop());
+		}
 	}
 
 protected:

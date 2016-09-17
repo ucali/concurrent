@@ -14,12 +14,14 @@ namespace {
 template <typename _M>
 class _SyncMap {
 public:
-	typedef typename _M MapType;
+	typedef std::shared_ptr<_SyncMap<_M>> Ptr;
+
 	typedef typename _M::key_type KeyType;
 	typedef typename _M::mapped_type ValueType;
-	typedef typename _M::value_type PairType;
 
-	typedef std::shared_ptr<_SyncMap<_M>> Ptr;
+	typedef typename _M::value_type PairType;
+	typedef typename std::pair<KeyType, ValueType> Type;
+
 
 	_SyncMap() {}
 	~_SyncMap() { Close(); }
@@ -28,6 +30,11 @@ public:
         std::unique_lock<std::mutex> lock(_mutex);
         _map.insert(std::make_pair(k, v));
     }
+
+	void Insert(const Type& t) {
+		std::unique_lock<std::mutex> lock(_mutex);
+		_map.insert(t);
+	}
 
     bool Remove(const KeyType& k) {
         std::unique_lock<std::mutex> lock(_mutex);
@@ -69,7 +76,7 @@ public:
         return _map.size();
     }
 
-	void ForEach(const std::function<void(const std::pair<KeyType, ValueType>&)>& fn) const {
+	void ForEach(const std::function<void(const Type&)>& fn) const {
 		std::unique_lock<std::mutex> lock(_mutex);
 		std::for_each(_map.begin(), _map.end(), fn);
 	}

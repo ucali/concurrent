@@ -103,20 +103,20 @@ public:
 		return item;
 	}
 
-	template <typename _M, typename _O>
-	using _Collector = _StreamItem<_SyncMap<_M>, SyncQueue<_O>>;
+	template <typename _O>
+	using _Collector = _StreamItem<O, SyncQueue<_O>>;
 
-	template <typename _M, typename _O >
-	typename _Collector<_M, _O>::Ptr Collect(const std::function < _O(typename _SyncMap<_M>::KeyType, typename _SyncMap<_M>::ValueType) > & fn, size_t s = 1) {
-		typename _Collector<_M, _O>::Ptr item(new _Collector<_M, _O>(_out, _pool));
+	template <typename _O >
+	typename _Collector<_O>::Ptr Collect(const std::function < _O(const typename O::Type&) > & fn, size_t s = 1) {
+		typename _Collector<_O>::Ptr item(new _Collector<_O>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
 
 		_pool->Send([item, fn, wg] {
 			try {
 				item->Input()->Wait();
-				item->Input()->ForEach([item, fn](const typename _SyncMap<_M>::PairType& pair) {
-					auto o = fn(pair.first, pair.second);
+				item->Input()->ForEach([item, fn](const typename O::Type& v) {
+					auto o = fn(v);
 					item->Output()->Push(o);
 				});
 
@@ -138,15 +138,15 @@ public:
 	}
 
 	template <typename _O>
-	_O Reduce(const std::function<_O (typename O::KeyType, typename O::ValueType, _O&)>& fn) {
+	_O Reduce(const std::function<_O (const typename O::Type&, _O&)>& fn) {
 		std::promise<_O> promise;
 		auto result = promise.get_future();
 
 		_pool->Send([this, &promise, &fn] {
-			this->Output()->Wait();
+			Output()->Wait();
 			_O o = _O();
-			this->Output()->ForEach([&o, &fn](const typename O::PairType& pair) {
-				o = std::move(fn(pair.first, pair.second, o));
+			Output()->ForEach([&o, &fn](const typename O::Type& pair) {
+				o = std::move(fn(pair, o));
 			});
 
 			promise.set_value(o);
@@ -155,17 +155,19 @@ public:
 		return std::move(result.get());
 	}
 
-	template <typename _O>
+	/*template <typename _O>
 	_O Reduce(const std::function<_O(typename O::ValueType, _O&)>& fn) {
 		std::promise<_O> promise;
 		auto result = promise.get_future();
 
-		_pool->Send([this, &promise, &fn] {
+		_pool->Send([&promise, &fn] {
 			_O o = _O();
 			try {
 				while (Input()->CanReceive()) {
 					o = fn(Input()->Pop(), o);
 				}
+
+				//
 				promise.set_value(o);
 			} catch (const ex::ClosedQueueException& ex) {
 				promise.set_value(o);
@@ -173,7 +175,7 @@ public:
 		});
 
 		return result.get();
-	}
+	}*/
 
 	void Close() {
 		_out->Wait();

@@ -11,9 +11,9 @@ TEST_CASE("TestPoolProcessing") {
 
 	Streamer<int> item;
     auto result = item.Map<std::multimap<int, int>>([] (int i) {
-        return std::move(std::pair<int, int>(i, i));
-    })->Collect<std::multimap<int, int>, int>([](int k, int v) {
-		return k + v;
+        return std::make_pair(i, i);
+    })->Collect<int>([](auto k) {
+		return k.first + k.second;
 	});
 
 	auto input = item.Input();
@@ -76,7 +76,7 @@ TEST_CASE("TestPoolClass") {
 		return std::move(std::pair<int64_t, Test>(t.id, t));
 	}, 2);
 
-	auto count = result->Reduce<size_t>([] (int64_t v, Test t, size_t& s) {
+	auto count = result->Reduce<size_t>([] (auto t, size_t& s) {
 		return s + 1;
 	});
 	REQUIRE(count == 5000000);
@@ -109,7 +109,7 @@ TEST_CASE("TestPoolConsumer") {
 	item.Stream(input.begin(), input.end());
 	auto ret2 = item.Map<std::map<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
-	})->Reduce<int>([](int k, int v, int& o) {
+	})->Reduce<int>([](auto v, int& o) {
 		return o + 1;
 	});
 
