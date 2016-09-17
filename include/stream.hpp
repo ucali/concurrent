@@ -155,28 +155,6 @@ public:
 		return std::move(result.get());
 	}
 
-	/*template <typename _O>
-	_O Reduce(const std::function<_O(typename O::ValueType, _O&)>& fn) {
-		std::promise<_O> promise;
-		auto result = promise.get_future();
-
-		_pool->Send([&promise, &fn] {
-			_O o = _O();
-			try {
-				while (Input()->CanReceive()) {
-					o = fn(Input()->Pop(), o);
-				}
-
-				//
-				promise.set_value(o);
-			} catch (const ex::ClosedQueueException& ex) {
-				promise.set_value(o);
-			}
-		});
-
-		return result.get();
-	}*/
-
 	void Close() {
 		_out->Wait();
 		_pool->Close();

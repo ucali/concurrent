@@ -230,7 +230,7 @@ public:
 				try {
 					auto h = _msgQ.Pop();
 					if (h != nullptr) {
-						_counter++;
+                        _counter++;
 						h->Exec();
 						_counter--;
 					}
@@ -250,22 +250,23 @@ public:
 private:
     void init(size_t s) noexcept {
         _guard.store(true);
+        _counter.store(0);
 
-		Add(s);
+        Add(std::max(6l, long(s)));
 
         _ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
     }
 
 	bool isAlmostFull() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		return _threads.size() - _counter < 2;
+        return _threads.size() - _counter <= 2;
 	}
 
 	void launch(typename Task<R>::Ptr ptr) {
 		if (isAlmostFull()) {
-			Add(1);
+            Add(4);
 		}
-		_msgQ.Push(ptr);
+        _msgQ.Push(ptr);
 
 	}
 
