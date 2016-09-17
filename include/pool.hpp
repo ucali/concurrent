@@ -180,7 +180,7 @@ public:
 
     void Send(const std::function<R ()>& c, size_t num = 1) {
         for (int i = 0; i < num; i++) {
-            _Task<R>::Ptr ptr(new _Task<R>(c));
+            typename _Task<R>::Ptr ptr(new _Task<R>(c));
 
 			if (isAlmostFull()) {
 				Add(1);
@@ -272,8 +272,8 @@ private:
     SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;
     std::vector<std::thread> _threads;
 
-    std::atomic_bool _guard = false;
-	std::atomic_int16_t _counter = 0;
+    std::atomic_bool _guard;
+    std::atomic<int>_counter;
 
     mutable std::mutex _mutex;
 
