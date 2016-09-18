@@ -65,6 +65,7 @@ TEST_CASE("TestPoolClass") {
 	};
 
 	std::vector<Test> input;
+	input.reserve(10000000);
 	for (int i = 0; i < 10000000; i++) {
 		input.push_back({ i, i % 2 == 0, "hello world" });
 	}
@@ -73,7 +74,7 @@ TEST_CASE("TestPoolClass") {
     auto result = Streamer<Test>(input.begin(), input.end()).Filter([](Test k) {
 		return k.status == true;
 	}, 2)->Map<std::map<int64_t, Test>>([](Test t) {
-		return std::move(std::pair<int64_t, Test>(t.id, t));
+		return std::make_pair(t.id, t);
 	}, 2);
 
 	auto count = result->Reduce<size_t>([] (auto t, size_t& s) {

@@ -63,8 +63,7 @@ TEST_CASE("TestPoolPostProcess") {
 		assert(a == 2.0f);
 	};
 
-    simple.Send<int, std::string>(fun, cb, 1, std::string("test")
-    );
+    simple.Send<int, std::string>(fun, cb, 1, std::string("test"));
 
 	std::cout << "<- TestPoolPostProcess" << std::endl;
 }

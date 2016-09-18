@@ -178,17 +178,6 @@ public:
 		launch(ptr);
 	}
 
-    void Send(const std::function<R ()>& c, size_t num = 1) {
-        for (int i = 0; i < num; i++) {
-            typename _Task<R>::Ptr ptr(new _Task<R>(c));
-
-			if (isAlmostFull()) {
-				Add(1);
-			}
-			_msgQ.Push(ptr);
-        }
-    }
-
     template <typename ..._Args>
     void Call(_Args... args) {
         auto fun = std::bind(_c, args...);
@@ -196,6 +185,18 @@ public:
 
         launch(ptr);
     }
+
+	void Send(const std::function<R()>& c, size_t num = 1) {
+		for (int i = 0; i < num; i++) {
+			typename _Task<R>::Ptr ptr(new _Task<R>(c));
+
+			_counter++;
+			if (isAlmostFull()) {
+				add(2);
+			}
+			_msgQ.Push(ptr);
+		}
+	}
 
     void Close() {
 		try {
@@ -224,13 +225,36 @@ public:
 		}
     }
 
-	void Add(size_t s) {
+private:
+    void init(size_t s) noexcept {
+        _guard.store(true);
+        _counter.store(0);
+
+        add(std::max(8l, long(s)));
+
+        _ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
+    }
+
+	bool isAlmostFull() {
+		std::unique_lock<std::mutex> lock(_mutex);
+        return _threads.size() - _counter <= 2;
+	}
+
+	void launch(typename Task<R>::Ptr ptr) {
+		_counter++;
+		if (isAlmostFull()) {
+            add(2);
+		}
+        _msgQ.Push(ptr);
+
+	}
+
+	void add(size_t s) {
 		auto func = [this] {
 			while (IsRunning()) {
 				try {
 					auto h = _msgQ.Pop();
 					if (h != nullptr) {
-                        _counter++;
 						h->Exec();
 						_counter--;
 					}
@@ -245,29 +269,6 @@ public:
 		for (int i = 0; i < s; i++) {
 			_threads.emplace_back(func);
 		}
-	}
-
-private:
-    void init(size_t s) noexcept {
-        _guard.store(true);
-        _counter.store(0);
-
-        Add(std::max(6l, long(s)));
-
-        _ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
-    }
-
-	bool isAlmostFull() {
-		std::unique_lock<std::mutex> lock(_mutex);
-        return _threads.size() - _counter <= 2;
-	}
-
-	void launch(typename Task<R>::Ptr ptr) {
-		if (isAlmostFull()) {
-            Add(4);
-		}
-        _msgQ.Push(ptr);
-
 	}
 
     SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;

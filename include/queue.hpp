@@ -45,15 +45,17 @@ public:
     inline size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _queue.size(); }
 
     inline void Close() { 
-		std::unique_lock<std::mutex> lock(_mutex); 
-		_closed = true; 
+		{
+			std::unique_lock<std::mutex> lock(_mutex);
+			_closed = true;
+		}
 		_empty.notify_all(); 
 		_full.notify_all();
 	}
 
 	void Wait() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		while (!_closed && _queue.size()) {
+		while (!_closed) {
 			_full.wait(lock);
 		}
 	}
