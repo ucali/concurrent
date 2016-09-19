@@ -112,3 +112,19 @@ TEST_CASE("TestMapPipeline") {
 
 	std::cout << "<- TestMapPipeline" << std::endl;
 }
+
+
+TEST_CASE("TestMultiMap") {
+	using namespace concurrent;
+
+	SyncMultiMap<int, int> multimap;
+	for (int i = 0; i < 10; i++) {
+		multimap.Insert(i + 1, i + 1);
+		multimap.Insert(i + 1, i + 1);
+		multimap.Insert(i + 1, i + 1);
+	}
+
+	multimap.Aggregate<std::vector<int>>([] (std::vector<int>&& val) {
+		REQUIRE(val.size() == 3);
+	});
+}

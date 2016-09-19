@@ -31,7 +31,7 @@ public:
 	using _Mapper = _StreamItem<SyncQueue<_I>, _SyncMap<_M>>;
 
 	template <typename _M>
-	typename _Mapper<typename O::ValueType, _M>::Ptr Map(const std::function<typename _SyncMap<_M>::PairType (typename O::ValueType)>& fn, size_t s = 1) {
+	typename _Mapper<typename O::ValueType, _M>::Ptr KV(const std::function<typename _SyncMap<_M>::PairType (typename O::ValueType)>& fn, size_t s = 1) {
 		typename _Mapper<typename O::ValueType, _M>::Ptr item(new _Mapper<typename O::ValueType, _M>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
@@ -164,6 +164,47 @@ public:
 			item->Output()->Close();
 		});
 
+		return item;
+	}
+
+	template <typename Storage>
+	using Partitioner = _StreamItem<O, SyncQueue<Storage>>;
+
+	template <typename Storage>
+	typename Partitioner<Storage>::Ptr Partition() {
+		typename Partitioner<Storage>::Ptr item(new Partitioner<Storage>(_out, _pool));
+
+		_pool->Send([item] {
+			auto input = item->Input();
+			auto output = item->Output();
+
+			std::function<void(Storage&&)> fn = [output] (Storage&& s) {
+				output->Push(std::move(s));
+			};
+
+			input->Aggregate(fn);
+
+		});
+		return item;
+	}
+
+	template <typename Storage>
+	typename Partitioner<Storage>::Ptr Partition(const std::function<bool (Storage&)>& fn) {
+		typename Partitioner<Storage>::Ptr item(new Partitioner<Storage>(_out, _pool));
+
+		_pool->Send([item, fn] {
+			auto input = item->Input();
+			auto output = item->Output();
+
+			std::function<void(Storage&&)> f = [output, fn](Storage&& s) {
+				if (fn(s)) {
+					output->Push(std::move(s));
+				}
+			};
+
+			input->Aggregate(f);
+
+		});
 		return item;
 	}
 

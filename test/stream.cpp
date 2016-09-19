@@ -3,6 +3,7 @@
 #include "stream.hpp"
 
 #include <iostream>
+#include <assert.h>
 
 TEST_CASE("TestPoolProcessing") {
 	std::cout << "TestPoolProcessing -> " << std::endl;
@@ -10,7 +11,7 @@ TEST_CASE("TestPoolProcessing") {
     using namespace concurrent;
 
 	Streamer<int> item;
-    auto result = item.Map<std::multimap<int, int>>([] (int i) {
+    auto result = item.KV<std::multimap<int, int>>([] (int i) {
         return std::make_pair(i, i);
     })->Transform<int>([](auto k) {
 		return k.first + k.second;
@@ -37,7 +38,7 @@ TEST_CASE("TestPoolFilter") {
 		return k < 50;
 	})->Transform<int>([](auto k) {
 		return k;
-	})->Map<std::map<int, int>>([](int i) {
+	})->KV<std::map<int, int>>([](int i) {
 		return std::move(std::make_pair(i, i));
 	});
 
@@ -75,7 +76,7 @@ TEST_CASE("TestPoolClass") {
 	//Stream some data:
     auto result = Streamer<Test>(input.begin(), input.end()).Filter([](Test k) {
 		return k.status == true;
-	}, 2)->Map<std::map<int64_t, Test>>([](Test t) {
+	}, 2)->KV<std::map<int64_t, Test>>([](Test t) {
 		return std::make_pair(t.id, t);
 	}, 2);
 
@@ -110,7 +111,7 @@ TEST_CASE("TestPoolConsumer") {
 	REQUIRE(ret == 10);
 
 	item.Stream(input.begin(), input.end());
-	auto ret2 = item.Map<std::map<int, int>>([](int t) {
+	auto ret2 = item.KV<std::map<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
 	})->Reduce<int>([](auto v, int& o) {
 		return o + 1;
@@ -119,4 +120,33 @@ TEST_CASE("TestPoolConsumer") {
 	REQUIRE(ret2 == 4);
 
 	std::cout << "<- TestPoolConsumer" << std::endl;
+}
+
+
+
+TEST_CASE("TestPartition") {
+	std::cout << "TestPartition -> " << std::endl;
+	using namespace concurrent;
+
+	std::vector<int> input;
+	for (int i = 0; i < 4; i++) {
+		input.push_back(i + 1);
+		input.push_back(i + 1);
+	}
+
+	Streamer<int> item(input.begin(), input.end());
+	item.KV<std::multimap<int, int>>([](int t) {
+		return std::move(std::make_pair(t, t));
+	})->Partition<std::vector<int>>();
+
+	Streamer<int> item1(input.begin(), input.end());
+	item1.KV<std::multimap<int, int>>([](int t) {
+		return std::move(std::make_pair(t, t));
+	})->Partition<std::vector<int>>([] (auto&& vec) {
+		assert(vec.size() == 2);
+		return true;
+	});
+
+
+	std::cout << "<- TestPartition" << std::endl;
 }
