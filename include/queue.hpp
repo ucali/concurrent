@@ -73,6 +73,15 @@ public:
 		}
 	}
 
+	template <typename Storage>
+	void Aggregate(const std::function<void(Storage&&)>& fn) {
+		Storage storage;
+		while (CanReceive()) {
+			storage.push_back(std::move(Pop()));
+		}
+		fn(storage);
+	}
+
 	void Clear() {
 		//std::unique_lock<std::mutex> lock(_mutex);
 	}

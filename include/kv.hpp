@@ -20,7 +20,6 @@ public:
 	typedef typename _M::value_type PairType;
 	typedef typename std::pair<KeyType, ValueType> Type;
 
-
 	_SyncMap() {}
 	~_SyncMap() { Close(); }
 
@@ -75,8 +74,24 @@ public:
     }
 
 	void ForEach(const std::function<void(const Type&)>& fn) const {
-		std::unique_lock<std::mutex> lock(_mutex);
 		std::for_each(_map.begin(), _map.end(), fn);
+	}
+
+	template <typename Storage>
+	void Aggregate(const std::function<void(Storage&&)>& fn) const {
+		std::set<KeyType> keys;
+
+		std::unique_lock<std::mutex> lock(_mutex);
+
+		std::for_each(_map.begin(), _map.end(), [&keys](auto t) { keys.insert(t.first); });
+		for (const KeyType& t : keys) {
+			auto it = _map.equal_range(t); 
+			Storage storage;
+			storage.reserve(std::distance(it.first, it.second));
+			std::transform(it.first, it.second, std::back_inserter(storage), [](auto element) { return element.second; });
+
+			fn(std::move(storage));
+		}
 	}
 
     void Close() {
