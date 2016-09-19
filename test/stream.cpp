@@ -12,7 +12,7 @@ TEST_CASE("TestPoolProcessing") {
 	Streamer<int> item;
     auto result = item.Map<std::multimap<int, int>>([] (int i) {
         return std::make_pair(i, i);
-    })->Collect<int>([](auto k) {
+    })->Transform<int>([](auto k) {
 		return k.first + k.second;
 	});
 
@@ -35,6 +35,8 @@ TEST_CASE("TestPoolFilter") {
 	Streamer<int> item;
 	auto result = item.Filter([](int k) {
 		return k < 50;
+	})->Transform<int>([](auto k) {
+		return k;
 	})->Map<std::map<int, int>>([](int i) {
 		return std::move(std::make_pair(i, i));
 	});

@@ -132,7 +132,7 @@ public:
 	using _Collector = _StreamItem<O, SyncQueue<_O>>;
 
 	template <typename _O >
-	typename _Collector<_O>::Ptr Collect(const std::function < _O(const typename O::Type&) > & fn, size_t s = 1) {
+	typename _Collector<_O>::Ptr Transform(const std::function < _O(const typename O::Type&) > & fn, size_t s = 1) {
 		typename _Collector<_O>::Ptr item(new _Collector<_O>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));

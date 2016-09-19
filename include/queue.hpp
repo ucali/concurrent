@@ -73,6 +73,10 @@ public:
 		}
 	}
 
+	void Clear() {
+		//std::unique_lock<std::mutex> lock(_mutex);
+	}
+
 protected:
     T& First() { return _queue.front(); }
     const T& First() const { return _queue.front(); }
