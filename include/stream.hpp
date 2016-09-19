@@ -38,10 +38,13 @@ public:
 
 		_pool->Send([item, fn, wg] {
 			try {
+
+				auto input = item->Input();
 				auto output = item->Output();
+
 				while (item->Input()->CanReceive()) {
 					try {
-						auto ret = fn(item->Input()->Pop(500));
+						auto ret = fn(input->Pop(500));
 						output->Insert(ret.first, ret.second);
 					}
 					catch (const ex::ClosedQueueException& ex) {
@@ -56,10 +59,18 @@ public:
 			}
 		}, wg->Size());
 
-		_pool->Send([item, wg] {
+		_pool->Send([fn, item, wg] {
+			auto input = item->Input();
+			auto output = item->Output();
+
 			wg->Wait();
 
-			item->Output()->Close();
+			while (input->CanReceive()) {
+				auto ret = fn(input->Pop(500));
+				output->Insert(ret.first, ret.second);
+			}
+
+			output->Close();
 		});
 
 		return item;
@@ -74,12 +85,15 @@ public:
 
 		_pool->Send([item, fn, wg] {
 			try {
-				while (item->Input()->CanReceive()) {
+				auto input = item->Input();
+				auto output = item->Output();
+
+				while (input->CanReceive()) {
 					try {
-						auto val = item->Input()->Pop(2000);
+						auto val = input->Pop(500);
 						auto ret = fn(val);
 						if (ret) {
-							item->Output()->Push(val);
+							output->Push(val);
 						}
 					}
 					catch (const ex::ClosedQueueException& ex) {
@@ -94,10 +108,21 @@ public:
 			}
 		}, wg->Size());
 
-		_pool->Send([item, wg] {
+		_pool->Send([fn, item, wg] {
+			auto input = item->Input();
+			auto output = item->Output();
+
 			wg->Wait();
 
-			item->Output()->Close();
+			while (input->CanReceive()) {
+				auto val = input->Pop(500);
+				auto ret = fn(val);
+				if (ret) {
+					output->Push(val);
+				}
+			}
+
+			output->Close();
 		});
 
 		return item;
@@ -114,10 +139,14 @@ public:
 
 		_pool->Send([item, fn, wg] {
 			try {
-				item->Input()->Wait();
-				item->Input()->ForEach([item, fn](const typename O::Type& v) {
+				auto input = item->Input();
+				auto output = item->Output();
+
+				input->Wait();
+
+				input->ForEach([output, item, fn] (const typename O::Type& v) {
 					auto o = fn(v);
-					item->Output()->Push(o);
+					output->Push(o);
 				});
 
 				wg->Finish();
@@ -131,6 +160,7 @@ public:
 		_pool->Send([item, wg] {
 			wg->Wait();
 
+			item->Input()->Clear();
 			item->Output()->Close();
 		});
 
@@ -145,7 +175,7 @@ public:
 		_pool->Send([this, &promise, &fn] {
 			Output()->Wait();
 			_O o = _O();
-			Output()->ForEach([&o, &fn](const typename O::Type& pair) {
+			Output()->ForEach([&o, &fn] (const typename O::Type& pair) {
 				o = std::move(fn(pair, o));
 			});
 
