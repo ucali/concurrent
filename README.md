@@ -1,6 +1,6 @@
-## Simple dependency free concurrent processing library
+# Simple dependency free concurrent processing library
 
-# Examples:
+## Examples:
 
 Processing:
 
@@ -9,7 +9,7 @@ Processing:
 
 auto result = Streamer<Test>(input.begin(), input.end()).Filter([](Test k) {
     return k.status == true;
-}, 2)->Map<std::map<int64_t, Test>>([](Test t) {
+}, 2)->KV<std::map<int64_t, Test>>([](Test t) {
 	return std::make_pair(t.id, t);
 }, 2);
 
@@ -21,9 +21,9 @@ auto count = result->Reduce<size_t>([] (auto t, size_t& s) {
 ```c++
 ...
 Streamer<int> item;
-auto result = item.Map<std::multimap<int, int>>([] (int i) {
+auto result = item.KV<std::multimap<int, int>>([] (int i) {
     return std::make_pair(i, i);
-})->Collect<int>([](auto k) {
+})->Transform<int>([](auto k) {
     return k.first + k.second;
 });
 

@@ -73,7 +73,6 @@ public:
 		}
 	}
 
-
 	template <typename Storage>
 	void Aggregate(const std::function<void(Storage&&)>& fn) {
 		Storage storage;
