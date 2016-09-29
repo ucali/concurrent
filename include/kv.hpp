@@ -74,6 +74,7 @@ public:
     }
 
 	void ForEach(const std::function<void(const Type&)>& fn) const {
+		std::unique_lock<std::mutex> lock(_mutex);
 		std::for_each(_map.begin(), _map.end(), fn);
 	}
 

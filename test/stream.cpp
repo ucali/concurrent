@@ -147,6 +147,16 @@ TEST_CASE("TestPartition") {
 		return true;
 	});
 
+	Streamer<int> item2(input.begin(), input.end());
+	item2.KV<std::multimap<int, int>>([](int t) {
+		return std::move(std::make_pair(t, t));
+	})->Partition<std::vector<int>, double>([](auto&& vec) {
+		assert(vec.size() == 2);
+		return vec.size();
+	})->ForEach([](auto v) {
+		v = v;
+	});
+
 
 	std::cout << "<- TestPartition" << std::endl;
 }

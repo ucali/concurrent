@@ -208,6 +208,31 @@ public:
 		return item;
 	}
 
+	template <typename Out>
+	using ProcPartitioner = _StreamItem<O, SyncQueue<Out>>;
+
+	template <typename Storage, typename Out>
+	typename ProcPartitioner<Out>::Ptr Partition(const std::function<Out (Storage&)>& fn) {
+		typename ProcPartitioner<Out>::Ptr item(new ProcPartitioner<Out>(_out, _pool));
+
+		_pool->Send([item, fn] {
+			auto input = item->Input();
+			input->Wait();
+
+			auto output = item->Output();
+
+			std::function<void(Storage&&)> f = [output, fn](Storage&& s) {
+				output->Push(std::move(fn(s)));
+			};
+
+			input->Aggregate(f);
+			output->Close();
+
+		});
+		return item;
+	}
+
+
 	template <typename _O>
 	_O Reduce(const std::function<_O (const typename O::Type&, _O&)>& fn) {
 		std::promise<_O> promise;
@@ -245,6 +270,11 @@ public:
 			_in->Push(*b);
 		}
 		_in->Close();
+	}
+
+	void ForEach(const std::function<void(const typename O::Type&)>& fn) {
+		Output()->Wait();
+		Output()->ForEach(fn);
 	}
 
 private:
