@@ -55,6 +55,8 @@ public:
 					std::cerr << ex.what() << std::endl;
 				}
 			}
+
+			output->Close();
 		});
 
 		return item;
@@ -122,6 +124,8 @@ public:
 					if (ret) {
 						output->Push(val);
 					}
+
+					output->Close();
 				}
 				catch (const ex::ClosedQueueException& ex) {
 					std::cerr << ex.what() << std::endl;
@@ -199,6 +203,9 @@ public:
 				auto o = fn(v);
 				output->Push(o);
 			});
+
+			item->Input()->Clear();
+			item->Output()->Close();
 
 		});
 		return item; 
