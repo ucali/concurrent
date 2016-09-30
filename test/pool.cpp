@@ -52,14 +52,18 @@ TEST_CASE("TestPoolPostProcess") {
 	std::cout << "TestPoolPostProcess -> " << std::endl;
 
     concurrent::Pool<double> simple;
-    simple.Send<int, std::string>(
-		[](int a, std::string b) {
-			assert(a == 1);
-			assert(b == "test");
-			return a*2.0f;
-		}, [](double a) {
-			assert(a == 2.0f);
-		}, 1, std::string("test"));
+
+	std::function<double(int, std::string)> fun = [](int a, std::string b) {
+		assert(a == 1);
+		assert(b == "test");
+		return a*2.0f;
+	};
+
+	std::function<void(double)> cb = [](double a) {
+		assert(a == 2.0f);
+	};
+
+	simple.Send<int, std::string>(fun, cb, 1, std::string("test"));
 
 	std::cout << "<- TestPoolPostProcess" << std::endl;
 }
