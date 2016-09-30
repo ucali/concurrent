@@ -70,7 +70,7 @@ TEST_CASE("TestQueuePipeline", "DefaultPool") {
     concurrent::SyncQueue<int> in;
     concurrent::SyncQueue<int> out;
 
-    auto& pool = concurrent::GetPool<>();
+    auto pool = concurrent::GetPool<>();
 
     pool->Send([&in] {
 
