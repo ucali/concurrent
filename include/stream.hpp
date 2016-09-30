@@ -12,9 +12,17 @@ public:
 	typedef std::shared_ptr<_StreamItem<I, O>> Ptr;
 
 	_StreamItem(size_t th = std::thread::hardware_concurrency()) : _pool(new Pool<void>(th)), _in(new O()), _out(_in) {}
+	_StreamItem(Pool<void>::Ptr p, size_t th = std::thread::hardware_concurrency()) : _pool(p), _in(new O()), _out(_in) {}
 
 	template <typename Iter>
-	_StreamItem(Iter begin, Iter end, size_t th = std::thread::hardware_concurrency()) : _pool(new Pool<void>(th)), _in(new O()), _out(_in) {
+	_StreamItem(Iter begin, Iter end, size_t th = std::thread::hardware_concurrency()) : _StreamItem(th) {
+		_pool->Send([this, begin, end] {
+			this->Stream(begin, end);
+		});
+	}
+
+	template <typename Iter>
+	_StreamItem(Iter begin, Iter end, Pool<void>::Ptr p, size_t th = std::thread::hardware_concurrency()) : _StreamItem(p, th) {
 		_pool->Send([this, begin, end] {
 			this->Stream(begin, end);
 		});
@@ -167,53 +175,12 @@ public:
 		return item;
 	}
 
-	template <typename Storage>
-	using Partitioner = _StreamItem<O, SyncQueue<Storage>>;
-
-	template <typename Storage>
-	typename Partitioner<Storage>::Ptr Partition() {
-		typename Partitioner<Storage>::Ptr item(new Partitioner<Storage>(_out, _pool));
-
-		_pool->Send([item] {
-			auto input = item->Input();
-			auto output = item->Output();
-
-			std::function<void(Storage&&)> fn = [output] (Storage&& s) {
-				output->Push(std::move(s));
-			};
-
-			input->Aggregate(fn);
-
-		});
-		return item;
-	}
-
-	template <typename Storage>
-	typename Partitioner<Storage>::Ptr Partition(const std::function<bool (Storage&)>& fn) {
-		typename Partitioner<Storage>::Ptr item(new Partitioner<Storage>(_out, _pool));
-
-		_pool->Send([item, fn] {
-			auto input = item->Input();
-			auto output = item->Output();
-
-			std::function<void(Storage&&)> f = [output, fn](Storage&& s) {
-				if (fn(s)) {
-					output->Push(std::move(s));
-				}
-			};
-
-			input->Aggregate(f);
-
-		});
-		return item;
-	}
-
 	template <typename Out>
-	using ProcPartitioner = _StreamItem<O, SyncQueue<Out>>;
+	using Partitioner = _StreamItem<O, SyncQueue<Out>>;
 
 	template <typename Storage, typename Out>
-	typename ProcPartitioner<Out>::Ptr Partition(const std::function<Out (Storage&)>& fn) {
-		typename ProcPartitioner<Out>::Ptr item(new ProcPartitioner<Out>(_out, _pool));
+	typename Partitioner<Out>::Ptr Partition(const std::function<Out (Storage&)>& fn) {
+		typename Partitioner<Out>::Ptr item(new Partitioner<Out>(_out, _pool));
 
 		_pool->Send([item, fn] {
 			auto input = item->Input();

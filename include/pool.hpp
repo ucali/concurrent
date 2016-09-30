@@ -289,8 +289,11 @@ private:
 };
 
 template <typename R = void>
-inline Pool<R>& SystemTaskPool() {
-    static Pool<R> pool;
+inline typename Pool<R>::Ptr GetPool() {
+    static typename Pool<R>::Ptr pool;
+	if (pool.get() == nullptr) {
+		pool.reset(new Pool<R>());
+	}
     return pool;
 }
 

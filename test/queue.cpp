@@ -70,9 +70,9 @@ TEST_CASE("TestQueuePipeline", "DefaultPool") {
     concurrent::SyncQueue<int> in;
     concurrent::SyncQueue<int> out;
 
-    auto& pool = concurrent::SystemTaskPool<>();
+    auto& pool = concurrent::GetPool<>();
 
-    pool.Send([&in] {
+    pool->Send([&in] {
 
 		std::cout << "TID: " << std::this_thread::get_id() << std::endl;
 
@@ -85,7 +85,7 @@ TEST_CASE("TestQueuePipeline", "DefaultPool") {
 		std::cout << "TID: " << std::this_thread::get_id() << std::endl;
     });
 
-    pool.Send([&in, &out] {
+    pool->Send([&in, &out] {
 		std::cout << "TID: " << std::this_thread::get_id() << std::endl;
 		try {
 			while (in.CanReceive()) {

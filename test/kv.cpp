@@ -42,9 +42,9 @@ TEST_CASE("TestMapCallback", "DefaultPool") {
     concurrent::SyncQueue<int>::Ptr in(new concurrent::SyncQueue<int>());
     concurrent::SyncMap<int, int>::Ptr out(new concurrent::SyncMap<int, int>());
 
-    auto& pool = concurrent::SystemTaskPool<>();
+    auto& pool = concurrent::GetPool<>();
 
-    pool.Send([in, out] {
+    pool->Send([in, out] {
 		while (in->CanReceive()) {
 			auto val = in->Pop();
 			out->Insert(val, val);
@@ -76,9 +76,9 @@ TEST_CASE("TestMapPipeline") {
 
     concurrent::WaitGroup::Ptr wg(new concurrent::WaitGroup(4));
 
-    auto& pool = concurrent::SystemTaskPool<>();
+    auto& pool = concurrent::GetPool<>();
 
-    pool.Send([in, out, wg] {
+    pool->Send([in, out, wg] {
 		try {
 			while (in->CanReceive()) {
 				auto val = in->Pop();
@@ -91,7 +91,7 @@ TEST_CASE("TestMapPipeline") {
         wg->Finish();
     }, wg->Size());
 
-    pool.Send([in, out, wg] {
+    pool->Send([in, out, wg] {
         wg->Wait();
 		out->Close();
     });

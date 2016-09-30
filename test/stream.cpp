@@ -133,22 +133,9 @@ TEST_CASE("TestPartition") {
 		input.push_back(i + 1);
 		input.push_back(i + 1);
 	}
-
-	Streamer<int> item(input.begin(), input.end());
+	
+	Streamer<int> item(input.begin(), input.end(), GetPool());
 	item.KV<std::multimap<int, int>>([](int t) {
-		return std::move(std::make_pair(t, t));
-	})->Partition<std::vector<int>>();
-
-	Streamer<int> item1(input.begin(), input.end());
-	item1.KV<std::multimap<int, int>>([](int t) {
-		return std::move(std::make_pair(t, t));
-	})->Partition<std::vector<int>>([] (auto&& vec) {
-		assert(vec.size() == 2);
-		return true;
-	});
-
-	Streamer<int> item2(input.begin(), input.end());
-	item2.KV<std::multimap<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
 	})->Partition<std::vector<int>, double>([](auto&& vec) {
 		assert(vec.size() == 2);

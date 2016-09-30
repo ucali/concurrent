@@ -52,18 +52,14 @@ TEST_CASE("TestPoolPostProcess") {
 	std::cout << "TestPoolPostProcess -> " << std::endl;
 
     concurrent::Pool<double> simple;
-
-	std::function<double (int, std::string)> fun = [](int a, std::string b) {
-		assert(a == 1);
-		assert(b == "test");
-		return a*2.0f;
-	};
-
-	std::function<void (double)> cb = [](double a) {
-		assert(a == 2.0f);
-	};
-
-    simple.Send<int, std::string>(fun, cb, 1, std::string("test"));
+    simple.Send<int, std::string>(
+		[](int a, std::string b) {
+			assert(a == 1);
+			assert(b == "test");
+			return a*2.0f;
+		}, [](double a) {
+			assert(a == 2.0f);
+		}, 1, std::string("test"));
 
 	std::cout << "<- TestPoolPostProcess" << std::endl;
 }
@@ -97,9 +93,9 @@ TEST_CASE("TestPoolSpawn") {
 TEST_CASE("TestPoolDefault", "DefaultPool") {
 	std::cout << "TestPoolDefault -> " << std::endl;
 
-    concurrent::SystemTaskPool<>().Spawn(
+    concurrent::GetPool<>()->Spawn(
         [] (){
-            while (concurrent::SystemTaskPool<>().IsRunning()) {
+            while (concurrent::GetPool<>()->IsRunning()) {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
             std::cout << "Shutting down default pool.." << std::endl;
