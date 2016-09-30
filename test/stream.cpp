@@ -25,6 +25,8 @@ TEST_CASE("TestPoolProcessing") {
 	input->Close();
 	result->Close();
 
+	REQUIRE(result->Output()->Size() == 2000);
+
 	std::cout << "<- TestPoolProcessing" << std::endl;
 }
 
@@ -48,6 +50,7 @@ TEST_CASE("TestPoolFilter") {
 	}
 	input->Close();
 	result->Close();
+	REQUIRE(result->Output()->Size() == 50);
 
 	std::cout << "<- TestPoolFilter" << std::endl;
 }
