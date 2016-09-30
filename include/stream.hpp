@@ -39,7 +39,29 @@ public:
 	using _Mapper = _StreamItem<SyncQueue<_I>, _SyncMap<_M>>;
 
 	template <typename _M>
-	typename _Mapper<typename O::ValueType, _M>::Ptr KV(const std::function<typename _SyncMap<_M>::PairType (typename O::ValueType)>& fn, size_t s = 1) {
+	typename _Mapper<typename O::ValueType, _M>::Ptr KV(const std::function<typename _SyncMap<_M>::PairType(typename O::ValueType)>& fn) {
+		typename _Mapper<typename O::ValueType, _M>::Ptr item(new _Mapper<typename O::ValueType, _M>(_out, _pool));
+
+		_pool->Send([item, fn] {
+			auto input = item->Input();
+			auto output = item->Output();
+
+			while (item->Input()->CanReceive()) {
+				try {
+					auto ret = fn(input->Pop(500));
+					output->Insert(ret.first, ret.second);
+				}
+				catch (const ex::ClosedQueueException& ex) {
+					std::cerr << ex.what() << std::endl;
+				}
+			}
+		});
+
+		return item;
+	}
+
+	template <typename _M>
+	typename _Mapper<typename O::ValueType, _M>::Ptr KV(const std::function<typename _SyncMap<_M>::PairType (typename O::ValueType)>& fn, size_t s) {
 		typename _Mapper<typename O::ValueType, _M>::Ptr item(new _Mapper<typename O::ValueType, _M>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
@@ -86,7 +108,31 @@ public:
 
 	using Bouncer = _StreamItem<SyncQueue<typename O::ValueType>, SyncQueue<typename O::ValueType>>;
 
-	typename Bouncer::Ptr Filter(const std::function<bool(typename O::ValueType)>& fn, size_t s = 1) {
+	typename Bouncer::Ptr Filter(const std::function<bool(typename O::ValueType)>& fn) {
+		typename Bouncer::Ptr item(new Bouncer(_out, _pool));
+
+		_pool->Send([item, fn] {
+			auto input = item->Input();
+			auto output = item->Output();
+
+			while (input->CanReceive()) {
+				try {
+					auto val = input->Pop(500);
+					auto ret = fn(val);
+					if (ret) {
+						output->Push(val);
+					}
+				}
+				catch (const ex::ClosedQueueException& ex) {
+					std::cerr << ex.what() << std::endl;
+				}
+			}
+		});
+
+		return item;
+	}
+
+	typename Bouncer::Ptr Filter(const std::function<bool(typename O::ValueType)>& fn, size_t s) {
 		typename Bouncer::Ptr item(new Bouncer(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
@@ -140,7 +186,27 @@ public:
 	using _Collector = _StreamItem<O, SyncQueue<_O>>;
 
 	template <typename _O >
-	typename _Collector<_O>::Ptr Transform(const std::function < _O(const typename O::Type&) > & fn, size_t s = 1) {
+	typename _Collector<_O>::Ptr Transform(const std::function < _O(const typename O::Type&) > & fn) {
+		typename _Collector<_O>::Ptr item(new _Collector<_O>(_out, _pool));
+
+		_pool->Send([item, fn] {
+			auto input = item->Input();
+			auto output = item->Output();
+
+			input->Wait();
+
+			input->ForEach([output, item, fn](const typename O::Type& v) {
+				auto o = fn(v);
+				output->Push(o);
+			});
+
+		});
+		return item; 
+	}
+
+
+	template <typename _O >
+	typename _Collector<_O>::Ptr Transform(const std::function < _O(const typename O::Type&) > & fn, size_t s) {
 		typename _Collector<_O>::Ptr item(new _Collector<_O>(_out, _pool));
 
 		WaitGroup::Ptr wg(new WaitGroup(s));
