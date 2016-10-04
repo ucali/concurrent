@@ -1,5 +1,5 @@
 # Simple concurrent processing library
-![alt tag](https://travis-ci.org/ucali/concurrent.svg?branch=master)
+[![Build Status](https://travis-ci.org/ucali/concurrent.svg?branch=master)](https://travis-ci.org/ucali/concurrent)
 
 Dependency free library to simplify long running multistep processing and concurrent computation
 
