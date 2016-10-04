@@ -1,3 +1,9 @@
 language: cpp
+dist: xenial
+compiler:
+- clang
+- gcc
+os:
+- linux
 script:
   - mkdir build && cd build && cmake .. && ./test_concurrent
