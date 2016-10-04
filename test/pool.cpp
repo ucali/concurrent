@@ -94,16 +94,3 @@ TEST_CASE("TestPoolSpawn") {
 	std::cout << "<- TestPoolSpawn" << std::endl;
 }
 
-TEST_CASE("TestPoolDefault", "DefaultPool") {
-	std::cout << "TestPoolDefault -> " << std::endl;
-
-    concurrent::GetPool<>()->Spawn(
-        [] (){
-            while (concurrent::GetPool<>()->IsRunning()) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
-            std::cout << "Shutting down default pool.." << std::endl;
-        }
-    );
-}
-

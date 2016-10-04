@@ -138,8 +138,11 @@ TEST_CASE("TestPartition") {
 	}
 
 	int v1 = 0, v2 = 0;
+
+
+	concurrent::Pool<>::Ptr pool(new concurrent::Pool<>);
 	
-	Streamer<int> item(input.begin(), input.end(), GetPool());
+	Streamer<int> item(input.begin(), input.end(), pool);
 	item.KV<std::multimap<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
 	})->Partition<std::vector<int>, double>([](auto vec) {
@@ -149,7 +152,7 @@ TEST_CASE("TestPartition") {
 		v1 += v;
 	});
 
-	Streamer<int> item1(input.begin(), input.end(), GetPool());
+	Streamer<int> item1(input.begin(), input.end(), pool);
 	item1.KV<std::multimap<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
 	})->PartitionMT<std::vector<int>, double>([](auto vec) {
@@ -163,4 +166,6 @@ TEST_CASE("TestPartition") {
 	REQUIRE(v1 == v2);
 
 	std::cout << v1 << " <- TestPartition" << std::endl;
+
+
 }

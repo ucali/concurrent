@@ -288,15 +288,6 @@ private:
 	std::function<void(const std::exception&)> _ee;
 };
 
-template <typename R = void>
-inline typename Pool<R>::Ptr GetPool() {
-    static typename Pool<R>::Ptr pool;
-	if (pool.get() == nullptr) {
-		pool.reset(new Pool<R>());
-	}
-    return pool;
-}
-
 }
 
 #endif
