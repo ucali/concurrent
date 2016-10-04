@@ -4,9 +4,6 @@ dist: trusty
 os: linux
 
 matrix:
-  exclude:
-    - os: osx
-    - os: linux
   include:
     - os: linux
       sudo: required
