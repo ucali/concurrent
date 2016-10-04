@@ -1,8 +1,11 @@
-# Simple dependency free concurrent processing library
+# Simple concurrent processing library
+![alt tag](https://travis-ci.org/ucali/concurrent.svg?branch=master)
+
+Dependency free library to simplify long running multistep processing and concurrent computation
 
 ## Examples:
 
-Processing:
+Processing samples:
 
 ```c++
 ...
@@ -33,7 +36,29 @@ for (int i = 0; i < 1000; i++) {
 }
 ```
 
-Pool task:
+```c++
+
+using namespace concurrent;
+...
+
+Pool<>::Ptr pool(new concurrent::Pool<>);
+	
+Streamer<int>(
+     input.begin(), 
+     input.end(), 
+     pool
+).KV<std::multimap<int, int>>([] (int t) {
+	return std::move(std::make_pair(t, t));
+})->PartitionMT<std::vector<int>, double>([] (auto vec) {
+	assert(vec->size() == 2);
+	return vec->size();
+})->ForEach([&v2] (auto v) {
+	v2 += v;
+});
+```
+
+
+Task pool samples:
 
 ```c++
 concurrent::Pool<double> pool;
