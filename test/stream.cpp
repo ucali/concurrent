@@ -84,7 +84,7 @@ TEST_CASE("TestPoolClass") {
 	}, 2);
 
 	auto count = result->Reduce<size_t>([] (auto t, size_t& s) {
-		return s + 1;
+		s++;
 	});
 	REQUIRE(count == 5000000);
 
@@ -117,7 +117,7 @@ TEST_CASE("TestPoolConsumer") {
 	auto ret2 = item.KV<std::map<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
 	})->Reduce<int>([](auto v, int& o) {
-		return o + 1;
+		o++;
 	});
 
 	REQUIRE(ret2 == 4);

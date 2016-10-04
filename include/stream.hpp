@@ -125,12 +125,12 @@ public:
 						output->Push(val);
 					}
 
-					output->Close();
 				}
 				catch (const ex::ClosedQueueException& ex) {
 					std::cerr << ex.what() << std::endl;
 				}
 			}
+			output->Close();
 		});
 
 		return item;
@@ -204,8 +204,8 @@ public:
 				output->Push(o);
 			});
 
-			item->Input()->Clear();
 			item->Output()->Close();
+			item->Input()->Clear();
 
 		});
 		return item; 
@@ -274,7 +274,7 @@ public:
 
 
 	template <typename _O>
-	_O Reduce(const std::function<_O (const typename O::Type&, _O&)>& fn) {
+	_O Reduce(const std::function<void (const typename O::Type&, _O&)>& fn) {
 		std::promise<_O> promise;
 		auto result = promise.get_future();
 
@@ -282,7 +282,7 @@ public:
 			Output()->Wait();
 			_O o = _O();
 			Output()->ForEach([&o, &fn] (const typename O::Type& pair) {
-				o = std::move(fn(pair, o));
+				fn(pair, o);
 			});
 
 			promise.set_value(o);
@@ -293,6 +293,11 @@ public:
 
 	void Close() {
 		_out->Wait();
+		_pool->Close();
+	}
+
+	void Wait() {
+		_out->WaitForEmpty();
 		_pool->Close();
 	}
 

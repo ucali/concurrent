@@ -53,6 +53,13 @@ public:
 		_full.notify_all();
 	}
 
+	void WaitForEmpty() {
+		std::unique_lock<std::mutex> lock(_mutex);
+		while (!_closed || _queue.size()) {
+			_full.wait(lock);
+		}
+	}
+
 	void Wait() {
 		std::unique_lock<std::mutex> lock(_mutex);
 		while (!_closed) {

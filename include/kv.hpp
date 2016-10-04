@@ -110,6 +110,13 @@ public:
 		}
     }
 
+	void WaitForEmpty() {
+		std::unique_lock<std::mutex> lock(_mutex);
+		while (_opened || _map.size()) {
+			_waiter.wait(lock);
+		}
+	}
+
 protected:
 	bool _opened = true;
 	
