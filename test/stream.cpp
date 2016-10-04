@@ -108,7 +108,7 @@ TEST_CASE("TestPoolConsumer") {
 
 	Streamer<int> item(input.begin(), input.end());
 	auto ret = item.Reduce<int>([](int i, int& res) {
-		return res + i;
+		res += i;
 	});
 
 	REQUIRE(ret == 10);
