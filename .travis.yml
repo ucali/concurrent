@@ -5,10 +5,7 @@ os: linux
 
 matrix:
   include:
-    - os: linux
-      sudo: required
-      dist: trusty
-      compiler: gcc:
+    - compiler: gcc:
       addons:
         apt:
           sources:
