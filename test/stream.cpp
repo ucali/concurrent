@@ -132,21 +132,35 @@ TEST_CASE("TestPartition") {
 	using namespace concurrent;
 
 	std::vector<int> input;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 100; i++) {
 		input.push_back(i + 1);
 		input.push_back(i + 1);
 	}
+
+	int v1 = 0, v2 = 0;
 	
 	Streamer<int> item(input.begin(), input.end(), GetPool());
 	item.KV<std::multimap<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
-	})->Partition<std::vector<int>, double>([](auto&& vec) {
-		assert(vec.size() == 2);
-		return vec.size();
-	})->ForEach([](auto v) {
-		v = v;
+	})->Partition<std::vector<int>, double>([](auto vec) {
+		assert(vec->size() == 2);
+		return vec->size();
+	})->ForEach([&v1](auto v) {
+		v1 += v;
 	});
 
+	Streamer<int> item1(input.begin(), input.end(), GetPool());
+	item1.KV<std::multimap<int, int>>([](int t) {
+		return std::move(std::make_pair(t, t));
+	})->PartitionMT<std::vector<int>, double>([](auto vec) {
+		assert(vec->size() == 2);
+		return vec->size();
+	})->ForEach([&v2](auto v) {
+		v2 += v;
+	});
 
-	std::cout << "<- TestPartition" << std::endl;
+	REQUIRE(v1 == 200);
+	REQUIRE(v1 == v2);
+
+	std::cout << v1 << " <- TestPartition" << std::endl;
 }

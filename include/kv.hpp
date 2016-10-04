@@ -79,7 +79,10 @@ public:
 	}
 
 	template <typename Storage>
-	void Aggregate(const std::function<void(Storage&&)>& fn) const {
+	void Aggregate(const std::function<void(std::shared_ptr<Storage>)>& fn) const {
+
+		using StoragePtr = std::shared_ptr<Storage>;
+
 		std::set<KeyType> keys;
 
 		std::unique_lock<std::mutex> lock(_mutex);
@@ -87,11 +90,11 @@ public:
 		std::for_each(_map.begin(), _map.end(), [&keys](auto t) { keys.insert(t.first); });
 		for (const KeyType& t : keys) {
 			auto it = _map.equal_range(t); 
-			Storage storage;
-			storage.reserve(std::distance(it.first, it.second));
-			std::transform(it.first, it.second, std::back_inserter(storage), [](auto element) { return element.second; });
+			StoragePtr storage(new Storage());
+			storage->reserve(std::distance(it.first, it.second));
+			std::transform(it.first, it.second, std::back_inserter(*storage), [](auto element) { return element.second; });
 
-			fn(std::move(storage));
+			fn(storage);
 		}
 	}
 

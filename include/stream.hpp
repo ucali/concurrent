@@ -12,7 +12,7 @@ public:
 	typedef std::shared_ptr<_StreamItem<I, O>> Ptr;
 
 	_StreamItem(size_t th = std::thread::hardware_concurrency()) : _pool(new Pool<void>(th)), _in(new O()), _out(_in) {}
-	_StreamItem(Pool<void>::Ptr p, size_t th = std::thread::hardware_concurrency()) : _pool(p), _in(new O()), _out(_in) {}
+	_StreamItem(Pool<void>::Ptr p) : _pool(p), _in(new O()), _out(_in) {}
 
 	template <typename Iter>
 	_StreamItem(Iter begin, Iter end, size_t th = std::thread::hardware_concurrency()) : _StreamItem(th) {
@@ -22,7 +22,7 @@ public:
 	}
 
 	template <typename Iter>
-	_StreamItem(Iter begin, Iter end, Pool<void>::Ptr p, size_t th = std::thread::hardware_concurrency()) : _StreamItem(p, th) {
+	_StreamItem(Iter begin, Iter end, Pool<void>::Ptr p) : _StreamItem(p) {
 		_pool->Send([this, begin, end] {
 			this->Stream(begin, end);
 		});
@@ -252,7 +252,7 @@ public:
 	using Partitioner = _StreamItem<O, SyncQueue<Out>>;
 
 	template <typename Storage, typename Out>
-	typename Partitioner<Out>::Ptr Partition(const std::function<Out (Storage&)>& fn) {
+	typename Partitioner<Out>::Ptr Partition(const std::function<Out (std::shared_ptr<Storage>)>& fn) {
 		typename Partitioner<Out>::Ptr item(new Partitioner<Out>(_out, _pool));
 
 		_pool->Send([item, fn] {
@@ -261,11 +261,38 @@ public:
 
 			auto output = item->Output();
 
-			std::function<void(Storage&&)> f = [output, fn](Storage&& s) {
+			std::function<void(std::shared_ptr<Storage>)> f = [output, fn](auto s) {
 				output->Push(std::move(fn(s)));
 			};
 
 			input->Aggregate(f);
+			output->Close();
+
+		});
+		return item;
+	}
+
+	template <typename Storage, typename Out>
+	typename Partitioner<Out>::Ptr PartitionMT(const std::function<Out(std::shared_ptr<Storage>)>& fn) {
+		typename Partitioner<Out>::Ptr item(new Partitioner<Out>(_out, _pool));
+
+		auto p = _pool;
+		_pool->Send([p, item, fn] {
+			auto input = item->Input();
+			input->Wait();
+
+			auto output = item->Output();
+
+			std::function<void(std::shared_ptr<Storage>)> f = [output, fn](auto s) {
+				output->Push(fn(s));
+			};
+
+			std::function<void(std::shared_ptr<Storage>)> main = [p, f](auto s) {
+				auto fun = std::bind(f, s);
+				p->Send(fun);
+			};
+
+			input->Aggregate(main);
 			output->Close();
 
 		});
