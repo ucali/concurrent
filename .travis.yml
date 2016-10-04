@@ -5,17 +5,14 @@ os: linux
 
 matrix:
   include:
-    - compiler: gcc:
+    - compiler: gcc
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
             - g++-5
-      env:
-        - COMPILER=g++-5
-        - CXX=g++-5
-        - CC=gcc-5
+      env: COMPILER=g++-5
 
 before_install:
   - sudo apt-get -q update
