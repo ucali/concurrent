@@ -1,4 +1,4 @@
-language: cpp
+language: generic
 sudo: required
 dist: trusty
 os: linux
@@ -28,7 +28,7 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-3.7
+            - llvm-toolchain-precise-3.7
           packages:
             - clang-3.7
             - clang++-3.7
