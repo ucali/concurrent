@@ -10,7 +10,7 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - g++-5
-env: COMPILER=g++-5
+      - clang-3.7
 
 install:
     - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
@@ -22,5 +22,5 @@ before_install:
 script:
   - mkdir build
   - cd build
-  - cmake -DCMAKE_CXX_COMPILER=$COMPILER .. && make 
+  - cmake -DCMAKE_CXX_COMPILER=$CXX .. && make 
   - ./test_concurrent
