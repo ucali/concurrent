@@ -324,7 +324,9 @@ public:
 			};
 
 			input->Aggregate(main);
-			output->Close();
+			p->Send([output] {
+				output->Close();
+			});
 
 		});
 		return item;
