@@ -53,7 +53,7 @@ Streamer<int>(
      pool
 ).KV<std::multimap<int, int>>([] (int t) {
 	return std::move(std::make_pair(t, t));
-})->PartitionMT<std::vector<int>, double>([] (auto vec) {
+})->PartitionMT<std::vector<int>, int>([] (const auto& k, auto vec) {
 	assert(vec->size() == 2);
 	return vec->size();
 })->ForEach([&v2] (auto v) {
