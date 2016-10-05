@@ -1,5 +1,8 @@
 # Simple concurrent processing library
+
 [![Build Status](https://travis-ci.org/ucali/concurrent.svg?branch=master)](https://travis-ci.org/ucali/concurrent)
+[![Build status](https://ci.appveyor.com/api/projects/status/6hj2ar4d2goq54rm/branch/master?svg=true)](https://ci.appveyor.com/project/ucali/concurrent/branch/master)
+
 
 Dependency free, header-only library to simplify long running multistep processing and concurrent computation.
 Tested with msvc14, gcc5, clang 3.7.
