@@ -124,7 +124,7 @@ TEST_CASE("TestMultiMap") {
 		multimap.Insert(i + 1, i + 1);
 	}
 
-	multimap.Aggregate<std::vector<int>>([] (auto val) {
+	multimap.Aggregate<std::vector<int>>([] (auto k, auto val) {
 		REQUIRE(val->size() == 3);
 	});
 }

@@ -27,11 +27,12 @@ TEST_CASE("TestQueueTimeout") {
 	std::cout << "TestQueueTimeout -> " << std::endl;
 
     concurrent::SyncQueue<std::string> sync(2);
-    REQUIRE(sync.Pop(100) == std::string());
+    REQUIRE(sync.PopNoThrow(100) == std::string());
 
     sync.Push(std::move(std::string("ok")), 100);
     REQUIRE(sync.Pop(100) == "ok");
-    REQUIRE(sync.Pop(100) == std::string());
+    REQUIRE(sync.PopNoThrow(100) == std::string());
+	REQUIRE_THROWS(sync.Pop(100));
 
     REQUIRE(sync.Push(std::move(std::string("ok")), 100));
     REQUIRE(sync.Push(std::move(std::string("ok")), 100));
@@ -41,11 +42,12 @@ TEST_CASE("TestQueueTimeout") {
 
     std::string value;
     concurrent::SyncQueue<std::string*> sync_ptr;
-    REQUIRE(sync_ptr.Pop(100) == nullptr);
+    REQUIRE(sync_ptr.PopNoThrow(100) == nullptr);
 
     sync_ptr.Push(&value);
     REQUIRE(sync_ptr.Pop(100) == &value);
-    REQUIRE(sync_ptr.Pop(100) == nullptr);
+    REQUIRE(sync_ptr.PopNoThrow(100) == nullptr);
+	REQUIRE_THROWS(sync_ptr.Pop(100));
 
 	std::cout << "<- TestQueueTimeout" << std::endl;
 }

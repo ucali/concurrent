@@ -79,7 +79,7 @@ public:
 	}
 
 	template <typename Storage>
-	void Aggregate(const std::function<void(std::shared_ptr<Storage>)>& fn) const {
+	void Aggregate(const std::function<void(const KeyType&, std::shared_ptr<Storage>)>& fn) const {
 
 		using StoragePtr = std::shared_ptr<Storage>;
 
@@ -94,7 +94,7 @@ public:
 			storage->reserve(std::distance(it.first, it.second));
 			std::transform(it.first, it.second, std::back_inserter(*storage), [](auto element) { return element.second; });
 
-			fn(storage);
+			fn(t, storage);
 		}
 	}
 

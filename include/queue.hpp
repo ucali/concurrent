@@ -16,6 +16,16 @@ public:
 	ClosedQueueException(std::string s) : std::runtime_error(s) {}
 };
 
+class TimeoutQueueException : public std::runtime_error {
+public:
+	TimeoutQueueException(std::string s) : std::runtime_error(s) {}
+};
+
+class EmptyQueueException : public std::runtime_error {
+public:
+	EmptyQueueException(std::string s) : std::runtime_error(s) {}
+};
+
 }
 
 template <typename T>
@@ -23,6 +33,7 @@ class SyncQueue {
 public:
 	typedef std::shared_ptr<SyncQueue> Ptr;
 
+	typedef size_t KeyType;
 	typedef T ValueType;
 	typedef T Type;
 
@@ -31,6 +42,7 @@ public:
 
     T Pop();
     T Pop(uint64_t ms);
+	T PopNoThrow(uint64_t ms);
 
     void Push(const T&);
     bool Push(const T&, uint64_t ms);
@@ -81,12 +93,12 @@ public:
 	}
 
 	template <typename Storage>
-	void Aggregate(const std::function<void(Storage&&)>& fn) {
+	void Aggregate(const std::function<void(const KeyType&, Storage&&)>& fn) {
 		Storage storage;
 		while (CanReceive()) {
 			storage.push_back(std::move(Pop()));
 		}
-		fn(storage);
+		fn(0, storage);
 	}
 
 	void Clear() {
@@ -148,10 +160,12 @@ T SyncQueue<T>::Pop(uint64_t ms) {
 				if (_closed) {
 					throw ex::ClosedQueueException("Pop: closed queue");
 				}
-                return T();
+				throw ex::TimeoutQueueException("Pop: timeout");
             }
 
-            if (_queue.size() == 0) { return T(); }
+            if (_queue.size() == 0) { 
+				throw ex::EmptyQueueException("Pop: empty");
+			}
         }
 
         t = _queue.front();
@@ -160,6 +174,15 @@ T SyncQueue<T>::Pop(uint64_t ms) {
 
     _full.notify_all();
     return t;
+}
+
+template <typename T>
+T SyncQueue<T>::PopNoThrow(uint64_t ms) {
+	try {
+		return Pop(ms);
+	} catch (...) {
+		return T();
+	}
 }
 
 

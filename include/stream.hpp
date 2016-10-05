@@ -46,14 +46,18 @@ public:
 			auto input = item->Input();
 			auto output = item->Output();
 
-			while (item->Input()->CanReceive()) {
-				try {
-					auto ret = fn(input->Pop(500));
-					output->Insert(ret.first, ret.second);
+			try {
+				while (item->Input()->CanReceive()) {
+					try {
+						auto ret = fn(input->Pop(500));
+						output->Insert(ret.first, ret.second);
+					} catch (const ex::TimeoutQueueException& ex) {
+					} catch (const ex::EmptyQueueException& ex) {
+					}
+				
 				}
-				catch (const ex::ClosedQueueException& ex) {
-					std::cerr << ex.what() << std::endl;
-				}
+			} catch (const ex::ClosedQueueException& ex) {
+				std::cerr << ex.what() << std::endl;
 			}
 
 			output->Close();
@@ -74,14 +78,18 @@ public:
 				auto input = item->Input();
 				auto output = item->Output();
 
-				while (item->Input()->CanReceive()) {
-					try {
-						auto ret = fn(input->Pop(500));
-						output->Insert(ret.first, ret.second);
+				try {
+					while (item->Input()->CanReceive()) {
+						try {
+							auto ret = fn(input->Pop(500));
+							output->Insert(ret.first, ret.second);
+						} catch (const ex::TimeoutQueueException& ex) {
+						} catch (const ex::EmptyQueueException& ex) {
+						}
+
 					}
-					catch (const ex::ClosedQueueException& ex) {
-						std::cerr << ex.what() << std::endl;
-					}
+				} catch (const ex::ClosedQueueException& ex) {
+					std::cerr << ex.what() << std::endl;
 				}
 				wg->Finish();
 			}
@@ -97,10 +105,18 @@ public:
 
 			wg->Wait();
 
-			while (input->CanReceive()) {
-				auto ret = fn(input->Pop(500));
-				output->Insert(ret.first, ret.second);
-			}
+			try {
+				while (input->CanReceive()) {
+					try {
+						auto ret = fn(input->Pop(500));
+						output->Insert(ret.first, ret.second);
+					} catch (const ex::TimeoutQueueException& ex) {
+					} catch (const ex::EmptyQueueException& ex) {
+					}
+				}
+			} catch (const ex::ClosedQueueException& ex) {
+				std::cerr << ex.what() << std::endl;
+			} 
 
 			output->Close();
 		});
@@ -119,10 +135,14 @@ public:
 
 			while (input->CanReceive()) {
 				try {
-					auto val = input->Pop(500);
-					auto ret = fn(val);
-					if (ret) {
-						output->Push(val);
+					try {
+						auto val = input->Pop(500);
+						auto ret = fn(val);
+						if (ret) {
+							output->Push(val);
+						}
+					} catch (const ex::TimeoutQueueException& ex) {
+					} catch (const ex::EmptyQueueException& ex) {
 					}
 
 				}
@@ -146,17 +166,20 @@ public:
 				auto input = item->Input();
 				auto output = item->Output();
 
-				while (input->CanReceive()) {
-					try {
-						auto val = input->Pop(500);
-						auto ret = fn(val);
-						if (ret) {
-							output->Push(val);
+				try {
+					while (input->CanReceive()) {
+						try {
+							auto val = input->Pop(500);
+							auto ret = fn(val);
+							if (ret) {
+								output->Push(val);
+							}
+						} catch (const ex::TimeoutQueueException& ex) {
+						} catch (const ex::EmptyQueueException& ex) {
 						}
 					}
-					catch (const ex::ClosedQueueException& ex) {
-						std::cerr << ex.what() << std::endl;
-					}
+				} catch (const ex::ClosedQueueException& ex) {
+					std::cerr << ex.what() << std::endl;
 				}
 				wg->Finish();
 			}
@@ -172,12 +195,20 @@ public:
 
 			wg->Wait();
 
-			while (input->CanReceive()) {
-				auto val = input->Pop(500);
-				auto ret = fn(val);
-				if (ret) {
-					output->Push(val);
+			try {
+				while (input->CanReceive()) {
+					try {
+						auto val = input->Pop(500);
+						auto ret = fn(val);
+						if (ret) {
+							output->Push(val);
+						}
+					} catch (const ex::TimeoutQueueException& ex) {
+					} catch (const ex::EmptyQueueException& ex) {
+					}
 				}
+			} catch (const ex::ClosedQueueException& ex) {
+				std::cerr << ex.what() << std::endl;
 			}
 
 			output->Close();
@@ -252,7 +283,7 @@ public:
 	using Partitioner = _StreamItem<O, SyncQueue<Out>>;
 
 	template <typename Storage, typename Out>
-	typename Partitioner<Out>::Ptr Partition(const std::function<Out (std::shared_ptr<Storage>)>& fn) {
+	typename Partitioner<Out>::Ptr Partition(const std::function<Out (const typename O::KeyType&, std::shared_ptr<Storage>)>& fn) {
 		typename Partitioner<Out>::Ptr item(new Partitioner<Out>(_out, _pool));
 
 		_pool->Send([item, fn] {
@@ -261,8 +292,8 @@ public:
 
 			auto output = item->Output();
 
-			std::function<void(std::shared_ptr<Storage>)> f = [output, fn](auto s) {
-				output->Push(std::move(fn(s)));
+			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> f = [output, fn](const auto& k, auto s) {
+				output->Push(std::move(fn(k, s)));
 			};
 
 			input->Aggregate(f);
@@ -273,7 +304,7 @@ public:
 	}
 
 	template <typename Storage, typename Out>
-	typename Partitioner<Out>::Ptr PartitionMT(const std::function<Out(std::shared_ptr<Storage>)>& fn) {
+	typename Partitioner<Out>::Ptr PartitionMT(const std::function<Out(const typename O::KeyType&, std::shared_ptr<Storage>)>& fn) {
 		typename Partitioner<Out>::Ptr item(new Partitioner<Out>(_out, _pool));
 
 		auto p = _pool;
@@ -283,12 +314,12 @@ public:
 
 			auto output = item->Output();
 
-			std::function<void(std::shared_ptr<Storage>)> f = [output, fn](auto s) {
-				output->Push(fn(s));
+			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> f = [output, fn](const auto& k, auto s) {
+				output->Push(fn(k, s));
 			};
 
-			std::function<void(std::shared_ptr<Storage>)> main = [p, f](auto s) {
-				auto fun = std::bind(f, s);
+			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> main = [p, f](const auto& k, auto s) {
+				auto fun = std::bind(f, k, s);
 				p->Send(fun);
 			};
 
