@@ -132,7 +132,7 @@ TEST_CASE("TestPartition") {
 	using namespace concurrent;
 
 	std::vector<int> input;
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 1000; i++) {
 		input.push_back(i + 1);
 		input.push_back(i + 1);
 	}
@@ -150,9 +150,6 @@ TEST_CASE("TestPartition") {
 		return vec->size();
 	})->ForEach([&v1, &c1](auto v) {
 		v1 += v;
-		if (v != 2) {
-			std::cout << v1 << " ### " << v << std::endl;
-		}
 		c1++;
 	});
 
@@ -168,7 +165,7 @@ TEST_CASE("TestPartition") {
 
 	std::cout << v1 << " " << c1 << std::endl;
 	std::cout << v2 << " " << c2 << std::endl;
-	REQUIRE(v1 == 200);
+	REQUIRE(v1 == 2000);
 	REQUIRE(v1 == v2);
 
 	std::cout << v1 << " <- TestPartition" << std::endl;
