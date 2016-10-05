@@ -1,4 +1,4 @@
-language: generic
+language: cpp
 sudo: required
 dist: trusty
 os: linux
@@ -22,7 +22,7 @@ matrix:
   include:
     - os: linux
       dist: trusty 
-      env: COMPILER=clang++-3.7
+      env: COMPILER=clang++
       compiler: clang
       addons:
         apt:
