@@ -7,8 +7,11 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-3.7
     packages:
       - g++-5
+      - clang-3.7
+      
 
 compiler: gcc
 env: COMPILER=g++-5 
@@ -25,8 +28,10 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-3.7
           packages:
             - clang-3.7
+            - clang++-3.7
       
 
 before_install:
