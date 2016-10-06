@@ -313,18 +313,23 @@ public:
 			input->Wait();
 
 			auto output = item->Output();
+			WaitGroup::Ptr group(new WaitGroup(0));
 
-			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> f = [output, fn](const auto& k, auto s) {
+			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> f = [group, output, fn](const auto& k, auto s) {
 				output->Push(fn(k, s));
+				group->Finish();
 			};
 
-			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> main = [p, f](const auto& k, auto s) {
+			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> main = [group, p, f](const auto& k, auto s) {
+				group->Add();
+
 				auto fun = std::bind(f, k, s);
 				p->Send(fun);
 			};
 
 			input->Aggregate(main);
-			p->Send([output] {
+			p->Send([group, output] {
+				group->Wait();
 				output->Close();
 			});
 
