@@ -81,27 +81,33 @@ public:
 
     WaitGroup(size_t s) : _s(s) {
         for (int i = 0; i < s; i++) {
-            _group.Push(i);
+            _c.fetch_add(1);
         }
     }
 
-    size_t Size() const { return _s; }
+	void Add() {
+		_c.fetch_add(1);
+	}
 
-    void Finish() {
-        _group.Pop();
-        _empty.notify_all();
-    }
+	size_t Size() const { return _s; }
+
+	void Finish() {
+		_c.fetch_sub(1);
+		_empty.notify_all();
+	}
+
 
     void Wait() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		while (_group.Size()) {
+		while (_c.load()) {
 			_empty.wait(lock);
 		}
     }
 
 private:
     const size_t _s;
-    SyncQueue<int> _group;
+	std::atomic<unsigned short> _c = 0;
+
 
     mutable std::mutex _mutex;
     std::condition_variable _empty;
