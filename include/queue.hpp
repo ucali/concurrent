@@ -146,7 +146,7 @@ T SyncQueue<T>::Pop() {
     }
 
     _full.notify_all();
-    return t;
+    return std::move(t);
 }
 
 template <typename T>
@@ -173,13 +173,13 @@ T SyncQueue<T>::Pop(uint64_t ms) {
     }
 
     _full.notify_all();
-    return t;
+    return std::move(t);
 }
 
 template <typename T>
 T SyncQueue<T>::PopNoThrow(uint64_t ms) {
 	try {
-		return Pop(ms);
+		return std::move(Pop(ms));
 	} catch (...) {
 		return T();
 	}
@@ -204,7 +204,7 @@ void SyncQueue<T>::Push(const T& p) {
             _full.wait(lock);
         }
 
-        _queue.push(p);
+        _queue.push(std::move(p));
     }
     _empty.notify_all();
 }
@@ -219,7 +219,7 @@ bool SyncQueue<T>::Push(const T& p, uint64_t ms) {
             }
         }
 
-        _queue.push(p);
+        _queue.push(std::move(p));
     }
     _empty.notify_all();
     return true;

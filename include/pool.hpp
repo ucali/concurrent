@@ -68,11 +68,6 @@ void Task<void>::Exec() { this->_c(); this->_t(); }
 template<typename R>
 void Task<R>::Exec() { this->_t(std::move(this->_c())); }
 
-class _Stub {
-public:
-	typedef std::shared_ptr<_Stub> Ptr;
-};
-
 }
 
 class WaitGroup {
