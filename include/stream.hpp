@@ -4,7 +4,6 @@
 #include "pool.hpp"
 
 namespace concurrent {
-namespace /*_*/ {
 
 template <typename I, typename O>
 class _StreamItem {
@@ -51,8 +50,8 @@ public:
 					try {
 						auto ret = fn(input->Pop(500));
 						output->Insert(ret.first, ret.second);
-					} catch (const ex::TimeoutQueueException& ex) {
-					} catch (const ex::EmptyQueueException& ex) {
+					} catch (const ex::TimeoutQueueException&) {
+					} catch (const ex::EmptyQueueException&) {
 					}
 				
 				}
@@ -83,8 +82,8 @@ public:
 						try {
 							auto ret = fn(input->Pop(500));
 							output->Insert(ret.first, ret.second);
-						} catch (const ex::TimeoutQueueException& ex) {
-						} catch (const ex::EmptyQueueException& ex) {
+						} catch (const ex::TimeoutQueueException&) {
+						} catch (const ex::EmptyQueueException&) {
 						}
 
 					}
@@ -93,7 +92,7 @@ public:
 				}
 				wg->Finish();
 			}
-			catch (const std::exception& e) {
+			catch (const std::exception&) {
 				wg->Finish();
 				throw;
 			}
@@ -110,8 +109,8 @@ public:
 					try {
 						auto ret = fn(input->Pop(500));
 						output->Insert(ret.first, ret.second);
-					} catch (const ex::TimeoutQueueException& ex) {
-					} catch (const ex::EmptyQueueException& ex) {
+					} catch (const ex::TimeoutQueueException&) {
+					} catch (const ex::EmptyQueueException&) {
 					}
 				}
 			} catch (const ex::ClosedQueueException& ex) {
@@ -141,8 +140,8 @@ public:
 						if (ret) {
 							output->Push(val);
 						}
-					} catch (const ex::TimeoutQueueException& ex) {
-					} catch (const ex::EmptyQueueException& ex) {
+					} catch (const ex::TimeoutQueueException&) {
+					} catch (const ex::EmptyQueueException&) {
 					}
 
 				}
@@ -174,8 +173,8 @@ public:
 							if (ret) {
 								output->Push(val);
 							}
-						} catch (const ex::TimeoutQueueException& ex) {
-						} catch (const ex::EmptyQueueException& ex) {
+						} catch (const ex::TimeoutQueueException&) {
+						} catch (const ex::EmptyQueueException&) {
 						}
 					}
 				} catch (const ex::ClosedQueueException& ex) {
@@ -183,7 +182,7 @@ public:
 				}
 				wg->Finish();
 			}
-			catch (const std::exception& e) {
+			catch (const std::exception&) {
 				wg->Finish();
 				throw;
 			}
@@ -203,8 +202,8 @@ public:
 						if (ret) {
 							output->Push(val);
 						}
-					} catch (const ex::TimeoutQueueException& ex) {
-					} catch (const ex::EmptyQueueException& ex) {
+					} catch (const ex::TimeoutQueueException&) {
+					} catch (const ex::EmptyQueueException&) {
 					}
 				}
 			} catch (const ex::ClosedQueueException& ex) {
@@ -397,7 +396,6 @@ private:
 	_StreamItem& operator=(_StreamItem const&) = delete;
 };
 
-}
 
 template <typename _I>
 using Streamer = _StreamItem<SyncQueue<_I>, SyncQueue<_I>>;

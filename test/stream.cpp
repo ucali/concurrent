@@ -133,11 +133,12 @@ TEST_CASE("TestPartition") {
 
 	std::vector<int> input;
 	for (int i = 0; i < 1000; i++) {
-		input.push_back(i + 1);
-		input.push_back(i + 1);
+		for (int j = 0; j < 1000; j++) {
+			input.push_back(i + 1);
+		}
 	}
 
-	int v1 = 0, v2 = 0;
+	size_t v1 = 0, v2 = 0;
 	int c1 = 0, c2 = 0;
 
 
@@ -146,7 +147,7 @@ TEST_CASE("TestPartition") {
 	Streamer<int> item(input.begin(), input.end(), pool);
 	item.KV<std::multimap<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
-	})->Partition<std::vector<int>, int>([](const auto& k, auto vec) {
+	})->Partition<std::vector<int>, size_t>([](const auto& k, auto vec) {
 		return vec->size();
 	})->ForEach([&v1, &c1](auto v) {
 		v1 += v;
@@ -156,7 +157,7 @@ TEST_CASE("TestPartition") {
 	Streamer<int> item1(input.begin(), input.end(), pool);
 	item1.KV<std::multimap<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
-	})->PartitionMT<std::vector<int>, int>([](const auto& k, auto vec) {
+	})->PartitionMT<std::vector<int>, size_t>([](const auto& k, auto vec) {
 		return vec->size();
 	})->ForEach([&v2, &c2](auto v) {
 		v2 += v;
@@ -165,7 +166,7 @@ TEST_CASE("TestPartition") {
 
 	std::cout << v1 << " " << c1 << std::endl;
 	std::cout << v2 << " " << c2 << std::endl;
-	REQUIRE(v1 == 2000);
+	REQUIRE(v1 == 1000*1000);
 	REQUIRE(v1 == v2);
 
 	std::cout << v1 << " <- TestPartition" << std::endl;

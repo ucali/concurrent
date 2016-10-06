@@ -34,11 +34,9 @@ TEST_CASE("TestPool") {
 TEST_CASE("TestPoolInit") {
 	std::cout << "TestPoolInit -> " << std::endl;
 
-    std::atomic_int val;
-
     concurrent::Pool<void, int, std::string> simple([] (int a, std::string b){
-        //REQUIRE(b == "test");
-
+        assert(b == "test");
+		assert(1 == 1);
     });
 
     for (int i = 0; i < 10; i++) {
