@@ -42,4 +42,3 @@ script:
   - cd build
   - cmake -DCMAKE_CXX_COMPILER=$COMPILER .. && make 
   - ./test_concurrent
-  - valgrind --leak-check=yes ./test_concurrent
