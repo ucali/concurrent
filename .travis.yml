@@ -35,7 +35,7 @@ matrix:
       
 
 before_install:
-  - sudo apt-get -q update
+  - sudo apt-get -q update && sudo apt-get install valgrind
 
 script:
   - mkdir build
