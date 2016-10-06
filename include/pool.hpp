@@ -80,6 +80,8 @@ public:
     typedef std::shared_ptr<WaitGroup> Ptr;
 
     WaitGroup(size_t s) : _s(s) {
+		_c.store(0);
+
         for (int i = 0; i < s; i++) {
             _c.fetch_add(1);
         }
@@ -106,7 +108,7 @@ public:
 
 private:
     const size_t _s;
-	std::atomic<unsigned short> _c = 0;
+	std::atomic<unsigned short> _c;
 
 
     mutable std::mutex _mutex;
