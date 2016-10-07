@@ -2,6 +2,8 @@
 
 #include "stream.hpp"
 
+#include <unordered_map>
+
 #include <iostream>
 #include <assert.h>
 
@@ -155,7 +157,7 @@ TEST_CASE("TestPartition") {
 	});
 
 	Streamer<int> item1(input.begin(), input.end(), pool);
-	item1.KV<std::multimap<int, int>>([](int t) {
+	item1.KV<std::unordered_multimap<int, int>>([](int t) {
 		return std::move(std::make_pair(t, t));
 	})->PartitionMT<std::vector<int>, size_t>([](const auto& k, auto vec) {
 		return vec->size();
