@@ -9,7 +9,7 @@ file(GLOB SOURCES test/*.cpp)
 
 find_package(Threads REQUIRED)
 
-set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
 find_package(Boost 1.62.0 COMPONENTS fiber) 
