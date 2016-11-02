@@ -225,6 +225,9 @@ public:
 			}
 
 			_threads.clear();
+		}
+		catch (const std::exception& e) {
+			std::cerr << "Error shutting down pool: " << e.what() << std::endl;
 		} catch (...) {
 			std::cerr << "Error shutting down pool." << std::endl; 
 		}

@@ -17,34 +17,28 @@ public:
 
 		_pool = Pool<>::Ptr(new Pool<>(num));
 		_pool->canGrow(false);
-		_pool->OnInit([] {
-			boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
-		});
 
 		_pool->Send([this] {
+			boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
 			lock_t lock(_mutex);
-			_cnd.wait(lock, [this] { return _running == false; });
-		});
+			_cnd.wait(lock, [this] { 
+				return _running == false && _counter.load() == 0; 
+			});
+		}, num);
 	}
 
 	template <typename ..._Args>
 	void Send(const std::function<void(_Args...)>& c, _Args... args) {
 		auto fun = std::bind(c, args...);
 
-		_counter.fetch_add(1);
-		typename Task<>::Ptr ptr(new Task<>(fun, [this]() {
-			_counter.fetch_sub(1);
-		}));
-
-		boost::fibers::fiber([ptr] {
-			ptr->Exec();
-		}).detach();
+		Send(fun);
 	}
 
 	void Send(const std::function<void()>& fun) {
 		_counter.fetch_add(1);
-		typename Task<void>::Ptr ptr(new Task<void>(fun, [this]() {
+		typename Task<void>::Ptr ptr(new Task<void>(fun, [this] {
 			_counter.fetch_sub(1);
+			_cnd.notify_all();
 		}));
 
 		boost::fibers::fiber([ptr] {
@@ -52,12 +46,17 @@ public:
 		}).detach();
 	}
 
+	void Close() {
 
-	~FiberStream() {
 		_running.store(false);
 		_cnd.notify_all();
 
 		_pool->Close();
+	}
+
+
+	~FiberStream() {
+		Close();
 	}
 
 private:
