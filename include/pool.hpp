@@ -121,10 +121,6 @@ public:
 
     explicit Pool(size_t s = std::thread::hardware_concurrency()) { init(s); }
     explicit Pool(const std::function<R (Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s);}
-    explicit Pool(const std::function<R (Args...)>& c,
-                  const typename _func_traits<R>::FuncType& t,
-                  size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
-    { init(s); }
 
 	~Pool() { Close(); }
 
@@ -137,6 +133,15 @@ public:
 	void OnException(const std::function<void(const std::exception&)>& f) { 
 		std::unique_lock<std::mutex> lock(_mutex);
 		_ee = f; 
+	}
+
+	void OnInit(const std::function<void()>& f) {
+		std::unique_lock<std::mutex> lock(_mutex);
+		_init = f;
+	}
+
+	void canGrow(bool b) {
+		_grow.store(b);
 	}
 
     template <typename ..._Args>
@@ -194,9 +199,7 @@ public:
 			typename _Task<R>::Ptr ptr(new _Task<R>(c));
 
 			_counter++;
-			if (isAlmostFull()) {
-				add(2);
-			}
+			checkAndGrow();
 			_msgQ.Push(ptr);
 		}
 	}
@@ -222,8 +225,7 @@ public:
 			}
 
 			_threads.clear();
-		}
-		catch (...) {
+		} catch (...) {
 			std::cerr << "Error shutting down pool." << std::endl; 
 		}
     }
@@ -231,11 +233,14 @@ public:
 private:
     void init(size_t s) noexcept {
         _guard.store(true);
+		_grow.store(true);
         _counter.store(0);
 
-        add(std::max(8l, long(s)));
+        _ee =   [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
+		_init = [] () {};
 
-        _ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
+		//add(std::max(8l, long(s)));
+		add(s);
     }
 
 	bool isAlmostFull() {
@@ -245,15 +250,23 @@ private:
 
 	void launch(typename Task<R>::Ptr ptr) {
 		_counter++;
-		if (isAlmostFull()) {
-            add(2);
-		}
+		checkAndGrow();
         _msgQ.Push(ptr);
 
 	}
 
+	void checkAndGrow() {
+		if (_grow.load() && isAlmostFull()) {
+			add(2);
+		}
+	}
+
 	void add(size_t s) {
 		auto func = [this] {
+			{
+				std::unique_lock<std::mutex> lock(_mutex);
+				_init();
+			}
 			while (IsRunning()) {
 				try {
 					auto h = _msgQ.Pop();
@@ -274,10 +287,11 @@ private:
 		}
 	}
 
-    SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;
+    SyncQueue<typename _Task<R>::Ptr> _msgQ;
     std::vector<std::thread> _threads;
 
     std::atomic_bool _guard;
+	std::atomic_bool _grow;
     std::atomic<int>_counter;
 
     mutable std::mutex _mutex;
@@ -287,8 +301,8 @@ private:
     Pool& operator=(Pool const&) = delete;
 
     const std::function<R (Args...)> _c;
-    const typename _func_traits<R>::FuncType _t;
 	std::function<void(const std::exception&)> _ee;
+	std::function<void()> _init;
 };
 
 }

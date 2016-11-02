@@ -67,16 +67,12 @@ public:
 
 	void WaitForEmpty() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		while (!_closed || _queue.size()) {
-			_full.wait(lock);
-		}
+		_full.wait(lock, [this] { return _closed && _queue.size() == 0; });
 	}
 
 	void Wait() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		while (!_closed) {
-			_full.wait(lock);
-		}
+		_full.wait(lock, [this] { return _closed; });
 	}
 
 	inline bool IsClosed() const { std::unique_lock<std::mutex> lock(_mutex); return _closed; }
