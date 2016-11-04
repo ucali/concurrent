@@ -38,7 +38,7 @@ TEST_CASE("TestFiberSingleThread") {
 
 	int i = 0;
 	fiber.Send([&i]() {
-		while (i < 1000) {
+		while (i < 100000) {
 			i++;
 			concurrent::yield();
 		}
@@ -46,7 +46,7 @@ TEST_CASE("TestFiberSingleThread") {
 
 	int j = 0;
 	fiber.Send([&j]() {
-		while (j < 1000) {
+		while (j < 100000) {
 			j++;
 			concurrent::yield();
 		}
@@ -55,7 +55,35 @@ TEST_CASE("TestFiberSingleThread") {
 
 	fiber.Close();
 
-	REQUIRE(i == 1000);
+	REQUIRE(i == 100000);
+	REQUIRE(j == i);
+	std::cout << "<- TestFiberInit" << std::endl;
+}
+
+TEST_CASE("TestFiberQueue") {
+	std::cout << "TestFiberInit -> " << std::endl;
+	concurrent::FiberStream fiber(1);
+
+	int i = 0;
+	fiber.Send([&i]() {
+		while (i < 100000) {
+			i++;
+			concurrent::yield();
+		}
+	});
+
+	int j = 0;
+	fiber.Send([&j]() {
+		while (j < 100000) {
+			j++;
+			concurrent::yield();
+		}
+	});
+
+
+	fiber.Close();
+
+	REQUIRE(i == 100000);
 	REQUIRE(j == i);
 	std::cout << "<- TestFiberInit" << std::endl;
 }

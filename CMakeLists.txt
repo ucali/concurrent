@@ -9,14 +9,23 @@ file(GLOB SOURCES test/*.cpp)
 
 find_package(Threads REQUIRED)
 
-set(Boost_USE_STATIC_LIBS ON) 
-set(Boost_USE_MULTITHREADED ON)  
-set(Boost_USE_STATIC_RUNTIME OFF) 
-find_package(Boost 1.62.0 COMPONENTS fiber) 
-include_directories(${Boost_INCLUDE_DIRS}) 
-
 add_executable(test_concurrent ${SOURCES})
-target_link_libraries(test_concurrent Threads::Threads ${Boost_LIBRARIES})
+
+find_package(Boost 1.62.0 COMPONENTS fiber context) 
+
+if (Boost_FOUND)
+    set(Boost_USE_STATIC_LIBS ON) 
+    set(Boost_USE_MULTITHREADED ON)  
+    set(Boost_USE_STATIC_RUNTIME OFF) 
+
+    include_directories(${Boost_INCLUDE_DIRS}) 
+    target_link_libraries(test_concurrent Threads::Threads ${Boost_LIBRARIES})
+   
+    add_definitions(-DBOOST_ALL_NO_LIB)
+    add_definitions(-DU_WITH_FIBER)
+else()
+    target_link_libraries(test_concurrent Threads::Threads)
+endif()
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/output" CACHE PATH "default install path" FORCE )
