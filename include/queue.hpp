@@ -11,20 +11,20 @@ namespace concurrent {
 
 namespace ex {
 
-class ClosedQueueException : public std::runtime_error {
-public:
-	ClosedQueueException(std::string s) : std::runtime_error(s) {}
-};
+	class ClosedQueueException : public std::runtime_error {
+	public:
+		ClosedQueueException(std::string s) : std::runtime_error(s) {}
+	};
 
-class TimeoutQueueException : public std::runtime_error {
-public:
-	TimeoutQueueException(std::string s) : std::runtime_error(s) {}
-};
+	class TimeoutQueueException : public std::runtime_error {
+	public:
+		TimeoutQueueException(std::string s) : std::runtime_error(s) {}
+	};
 
-class EmptyQueueException : public std::runtime_error {
-public:
-	EmptyQueueException(std::string s) : std::runtime_error(s) {}
-};
+	class EmptyQueueException : public std::runtime_error {
+	public:
+		EmptyQueueException(std::string s) : std::runtime_error(s) {}
+	};
 
 }
 
@@ -37,46 +37,42 @@ public:
 	typedef T ValueType;
 	typedef T Type;
 
-    SyncQueue(size_t t = 1 << 16) : _maxSize(t), _closed(false) { }
+	SyncQueue(size_t t = 1 << 16) : _maxSize(t), _closed(false) { }
 	~SyncQueue() { }
 
-    T Pop();
-    T Pop(uint64_t ms);
+	T Pop();
+	T Pop(uint64_t ms);
 	T PopNoThrow(uint64_t ms);
 
-    void Push(const T&);
-    bool Push(const T&, uint64_t ms);
+	void Push(const T&);
+	bool Push(const T&, uint64_t ms);
 
-    void Push(T&&);
-    bool Push(T&&, uint64_t ms);
+	void Push(T&&);
+	bool Push(T&&, uint64_t ms);
 
 	void WakeAndClose();
 
-    inline bool IsEmpty() const {  std::unique_lock<std::mutex> lock(_mutex); return _queue.size() == 0; }
-    inline bool IsFull() const { std::unique_lock<std::mutex> lock(_mutex); return _queue.size() == _maxSize; }
-    inline size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _queue.size(); }
+	inline bool IsEmpty() const { std::unique_lock<std::mutex> lock(_mutex); return _queue.size() == 0; }
+	inline bool IsFull() const { std::unique_lock<std::mutex> lock(_mutex); return _queue.size() == _maxSize; }
+	inline size_t Size() const { std::unique_lock<std::mutex> lock(_mutex); return _queue.size(); }
 
-    inline void Close() { 
+	inline void Close() {
 		{
 			std::unique_lock<std::mutex> lock(_mutex);
 			_closed = true;
 		}
-		_empty.notify_all(); 
+		_empty.notify_all();
 		_full.notify_all();
 	}
 
 	void WaitForEmpty() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		while (!_closed || _queue.size()) {
-			_full.wait(lock);
-		}
+		_full.wait(lock, [this] { return _closed && _queue.size() == 0; });
 	}
 
 	void Wait() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		while (!_closed) {
-			_full.wait(lock);
-		}
+		_full.wait(lock, [this] { return _closed; });
 	}
 
 	inline bool IsClosed() const { std::unique_lock<std::mutex> lock(_mutex); return _closed; }
@@ -106,81 +102,82 @@ public:
 	}
 
 protected:
-    T& First() { return _queue.front(); }
-    const T& First() const { return _queue.front(); }
+	T& First() { return _queue.front(); }
+	const T& First() const { return _queue.front(); }
 
-    T& Last() { return _queue.back(); }
-    const T& Last() const { return _queue.back(); }
+	T& Last() { return _queue.back(); }
+	const T& Last() const { return _queue.back(); }
 
 private:
-    std::queue<T> _queue;
-    const size_t _maxSize;
+	std::queue<T> _queue;
+	const size_t _maxSize;
 
-    bool _closed;
+	bool _closed;
 
-    mutable std::mutex _mutex;
-    std::condition_variable _empty;
-    std::condition_variable _full;
+	mutable std::mutex _mutex;
+	std::condition_variable _empty;
+	std::condition_variable _full;
 
-    SyncQueue(SyncQueue const&) = delete;
-    SyncQueue& operator=(SyncQueue const&) = delete;
+	SyncQueue(SyncQueue const&) = delete;
+	SyncQueue& operator=(SyncQueue const&) = delete;
 };
 
 template <typename T>
 T SyncQueue<T>::Pop() {
-    T t;
+	T t;
 
-    {
-        std::unique_lock<std::mutex> lock(_mutex);
-        while (_queue.size() == 0) {
-            if (_closed) { 
-                _full.notify_all();
-				throw ex::ClosedQueueException("Pop: closed queue"); 
+	{
+		std::unique_lock<std::mutex> lock(_mutex);
+		while (_queue.size() == 0) {
+			if (_closed) {
+				_full.notify_all();
+				throw ex::ClosedQueueException("Pop: closed queue");
 			}
 
-            _empty.wait(lock);
-        }
+			_empty.wait(lock);
+		}
 
-        t = _queue.front();
-        _queue.pop();
-    }
+		t = _queue.front();
+		_queue.pop();
+	}
 
-    _full.notify_all();
-    return std::move(t);
+	_full.notify_all();
+	return std::move(t);
 }
 
 template <typename T>
 T SyncQueue<T>::Pop(uint64_t ms) {
-    T t;
+	T t;
 
-    {
-        std::unique_lock<std::mutex> lock(_mutex);
-        if (_queue.size() == 0) {
-            if (_empty.wait_for(lock, std::chrono::milliseconds(ms)) == std::cv_status::timeout) {
+	{
+		std::unique_lock<std::mutex> lock(_mutex);
+		if (_queue.size() == 0) {
+			if (_empty.wait_for(lock, std::chrono::milliseconds(ms)) == std::cv_status::timeout) {
 				if (_closed) {
 					throw ex::ClosedQueueException("Pop: closed queue");
 				}
 				throw ex::TimeoutQueueException("Pop: timeout");
-            }
+			}
 
-            if (_queue.size() == 0) { 
+			if (_queue.size() == 0) {
 				throw ex::EmptyQueueException("Pop: empty");
 			}
-        }
+		}
 
-        t = _queue.front();
-        _queue.pop();
-    }
+		t = _queue.front();
+		_queue.pop();
+	}
 
-    _full.notify_all();
-    return std::move(t);
+	_full.notify_all();
+	return std::move(t);
 }
 
 template <typename T>
 T SyncQueue<T>::PopNoThrow(uint64_t ms) {
 	try {
 		return std::move(Pop(ms));
-	} catch (...) {
+	}
+	catch (...) {
 		return T();
 	}
 }
@@ -193,71 +190,71 @@ void SyncQueue<T>::WakeAndClose() {
 
 	_empty.notify_all();
 	_queue.push(T());
-	_closed = true; 
+	_closed = true;
 }
 
 template <typename T>
 void SyncQueue<T>::Push(const T& p) {
-    {
-        std::unique_lock<std::mutex> lock(_mutex);
-        while (_queue.size() == _maxSize) {
-            _full.wait(lock);
-        }
+	{
+		std::unique_lock<std::mutex> lock(_mutex);
+		while (_queue.size() == _maxSize) {
+			_full.wait(lock);
+		}
 
-        _queue.push(std::move(p));
-    }
-    _empty.notify_all();
+		_queue.push(std::move(p));
+	}
+	_empty.notify_all();
 }
 
 template <typename T>
 bool SyncQueue<T>::Push(const T& p, uint64_t ms) {
-    {
-        std::unique_lock<std::mutex> lock(_mutex);
-        if (_queue.size() == _maxSize) {
-            if (_full.wait_for(lock, std::chrono::milliseconds(ms)) == std::cv_status::timeout) {
-                return false;
-            }
-        }
+	{
+		std::unique_lock<std::mutex> lock(_mutex);
+		if (_queue.size() == _maxSize) {
+			if (_full.wait_for(lock, std::chrono::milliseconds(ms)) == std::cv_status::timeout) {
+				return false;
+			}
+		}
 
-        _queue.push(std::move(p));
-    }
-    _empty.notify_all();
-    return true;
+		_queue.push(std::move(p));
+	}
+	_empty.notify_all();
+	return true;
 }
 
 template <typename T>
 void SyncQueue<T>::Push(T&& p) {
-    {
-        std::unique_lock<std::mutex> lock(_mutex);
-        while (_queue.size() == _maxSize) {
-            _full.wait(lock);
-        }
+	{
+		std::unique_lock<std::mutex> lock(_mutex);
+		while (_queue.size() == _maxSize) {
+			_full.wait(lock);
+		}
 
-        _queue.push(std::move(p));
-    }
-    _empty.notify_all();
+		_queue.push(std::move(p));
+	}
+	_empty.notify_all();
 }
 
 template <typename T>
 bool SyncQueue<T>::Push(T&& p, uint64_t ms) {
-    {
-        std::unique_lock<std::mutex> lock(_mutex);
-        if (_queue.size() == _maxSize) {
-            if (_full.wait_for(lock, std::chrono::milliseconds(ms)) == std::cv_status::timeout) {
-                return false;
-            }
+	{
+		std::unique_lock<std::mutex> lock(_mutex);
+		if (_queue.size() == _maxSize) {
+			if (_full.wait_for(lock, std::chrono::milliseconds(ms)) == std::cv_status::timeout) {
+				return false;
+			}
 
-            if (_queue.size() == _maxSize) {
-                return false;
-            }
-        }
+			if (_queue.size() == _maxSize) {
+				return false;
+			}
+		}
 
-        _queue.push(std::move(p));
-    }
-    _empty.notify_all();
-    return true;
+		_queue.push(std::move(p));
+	}
+	_empty.notify_all();
+	return true;
 }
-    
+
 }
 
 #endif
