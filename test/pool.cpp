@@ -28,6 +28,8 @@ TEST_CASE("TestPool") {
 	};
     simple.Send<std::string, int, double, double>(fn2, std::string("test"), 1, 0.1, 0.1);
 
+	simple.Close();
+
 	std::cout << "<- TestPool" << std::endl;
 }
 

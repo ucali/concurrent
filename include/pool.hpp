@@ -96,9 +96,7 @@ public:
 
     void Wait() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		while (_c.load()) {
-			_empty.wait(lock);
-		}
+		_empty.wait(lock, [this] { return !_c.load(); });
     }
 
 private:
