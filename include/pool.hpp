@@ -50,6 +50,7 @@ namespace {
 	public:
 		typedef std::shared_ptr<Task<R>> Ptr;
 
+		Task(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) : _Task<R>(c), _t(t) {}
 		Task(const std::function<R()>& c) : _Task<R>(c) { _t = [](R) {}; }
 
 		virtual void Exec();
