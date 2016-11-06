@@ -235,7 +235,8 @@ namespace concurrent {
 			_guard.store(true);
 			_counter.store(0);
 
-			add(std::max(8l, long(s)));
+			//add(std::max(8l, long(s)));
+			add(s);
 
 			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 		}

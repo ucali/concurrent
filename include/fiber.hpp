@@ -20,7 +20,7 @@ public:
 		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
 
 		_pool = Pool<>::Ptr(new Pool<>(num));
-		_pool->canGrow(false);
+		//_pool->canGrow(false);
 
 		_pool->Send([this] {
 			boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
