@@ -240,8 +240,8 @@ private:
         _ee =   [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 		_init = [] () {};
 
-		add(std::max(8l, long(s)));
-		//add(s);
+		//add(std::max(8l, long(s)));
+		add(s);
     }
 
 	bool isAlmostFull() {
