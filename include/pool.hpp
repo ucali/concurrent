@@ -232,11 +232,9 @@ namespace concurrent {
 
 	private:
 		void init(size_t s) noexcept {
-			_guard.store(true);
-			_counter.store(0);
 
-			//add(std::max(8l, long(s)));
-			add(s);
+			add(std::max(8l, long(s)));
+			//add(s);
 
 			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 		}
@@ -280,8 +278,8 @@ namespace concurrent {
 		SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;
 		std::vector<std::thread> _threads;
 
-		std::atomic_bool _guard;
-		std::atomic<int>_counter;
+		std::atomic_bool _guard{true};
+		std::atomic<int>_counter{0};
 
 		mutable std::mutex _mutex;
 

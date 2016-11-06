@@ -7,6 +7,8 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 include_directories(include test/Catch/include)
 file(GLOB SOURCES test/*.cpp)
 
+add_definitions(-DNOMINMAX)
+
 find_package(Threads REQUIRED)
 
 add_executable(test_concurrent ${SOURCES})
