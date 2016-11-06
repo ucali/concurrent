@@ -6,10 +6,10 @@
 
 TEST_CASE("TestFiberInit") {
 	std::cout << "TestFiberInit -> " << std::endl;
-	concurrent::FiberStream fiber(4);
+	concurrent::FiberScheduler fiber;
 
 	int i = 0;
-	fiber.Send([&i](){
+	fiber.Run([&i](){
 		while (i < 1000) {
 			i++;
 			concurrent::yield();
@@ -17,7 +17,7 @@ TEST_CASE("TestFiberInit") {
 	});
 
 	int j = 0;
-	fiber.Send([&j]() {
+	fiber.Run([&j]() {
 		while (j < 1000) {
 			j++;
 			concurrent::yield();
@@ -33,11 +33,11 @@ TEST_CASE("TestFiberInit") {
 }
 
 TEST_CASE("TestFiberSingleThread") {
-	std::cout << "TestFiberInit -> " << std::endl;
-	concurrent::FiberStream fiber(1);
+	std::cout << "TestFiberSingleThread -> " << std::endl;
+	concurrent::FiberScheduler fiber(4);
 
 	int i = 0;
-	fiber.Send([&i]() {
+	fiber.Run([&i]() {
 		while (i < 100000) {
 			i++;
 			concurrent::yield();
@@ -45,7 +45,7 @@ TEST_CASE("TestFiberSingleThread") {
 	});
 
 	int j = 0;
-	fiber.Send([&j]() {
+	fiber.Run([&j]() {
 		while (j < 100000) {
 			j++;
 			concurrent::yield();
@@ -57,35 +57,40 @@ TEST_CASE("TestFiberSingleThread") {
 
 	REQUIRE(i == 100000);
 	REQUIRE(j == i);
-	std::cout << "<- TestFiberInit" << std::endl;
+	std::cout << "<- TestFiberSingleThread" << std::endl;
 }
 
 TEST_CASE("TestFiberQueue") {
-	std::cout << "TestFiberInit -> " << std::endl;
-	concurrent::FiberStream fiber(1);
+	std::cout << "TestFiberQueue -> " << std::endl;
+	concurrent::FiberScheduler fibers;
+
+	concurrent::Channel<int> chan;
 
 	int i = 0;
-	fiber.Send([&i]() {
-		while (i < 100000) {
-			i++;
-			concurrent::yield();
+	fibers.Run([&i, &chan]() {
+		concurrent::ChannelStatus status = concurrent::ChannelStatus::empty;
+		while (status != concurrent::ChannelStatus::closed) {
+			status = chan.try_pop(i);
 		}
+		std::cout << "Quit receive" << std::endl;
 	});
 
 	int j = 0;
-	fiber.Send([&j]() {
+	fibers.Run([&j, &chan]() {
 		while (j < 100000) {
 			j++;
-			concurrent::yield();
+			chan.push(j);
 		}
+		chan.close();
+		std::cout << "Quit send" << std::endl;
 	});
 
 
-	fiber.Close();
+	fibers.Close();
 
 	REQUIRE(i == 100000);
 	REQUIRE(j == i);
-	std::cout << "<- TestFiberInit" << std::endl;
+	std::cout << "<- TestFiberQueue" << std::endl;
 }
 
 
