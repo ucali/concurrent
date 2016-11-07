@@ -29,3 +29,5 @@ function install_boost {
 install_boost # at least version 1.60
 echo "Installed build dependecies."
 echo "  - Boost: ${BOOST_ROOT}"
+
+cd ${TRAVIS_BUILD_DIR}
