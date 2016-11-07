@@ -232,11 +232,10 @@ namespace concurrent {
 
 	private:
 		void init(size_t s) noexcept {
+			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 
 			add(std::max(8l, long(s)));
 			//add(s);
-
-			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 		}
 
 		bool isAlmostFull() {
