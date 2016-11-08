@@ -36,9 +36,10 @@ matrix:
 
 before_install:
   - sudo apt-get -q update && sudo apt-get install valgrind
+  
+install: source ci/install_${TRAVIS_OS_NAME}.sh
 
 script:
-  - sh ./ci/install_${TRAVIS_OS_NAME}.sh
   - mkdir build
   - cd build
   - cmake -DCMAKE_CXX_COMPILER=$COMPILER .. && make 
