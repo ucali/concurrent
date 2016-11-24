@@ -40,6 +40,7 @@ before_install:
 install: source ci/install_${TRAVIS_OS_NAME}.sh
 
 script:
+  - echo "  - Boost: ${BOOST_ROOT}"
   - mkdir build
   - cd build
   - cmake -DCMAKE_CXX_COMPILER=$COMPILER .. && make 
