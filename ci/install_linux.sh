@@ -11,7 +11,7 @@ function install_boost {
   echo "Downloading Boost ${BOOST_VERSION} from ${BOOST_URL}"
   mkdir -p ${BOOST_DIR} && cd ${BOOST_DIR}
   wget -O - ${BOOST_URL} | tar --strip-components=1 -xz -C ${BOOST_DIR} || exit 1
-  ./bootstrap.sh --with-libraries=${BOOST_LIBRARIES} && ./b2
+  ./bootstrap.sh --with-libraries=${BOOST_LIBRARIES} && ./b2 architecture=x64 toolset=$COMPILER
   export BOOST_ROOT=${BOOST_DIR}
 }
 
