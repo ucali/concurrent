@@ -21,7 +21,7 @@ function install_boost {
 }
 
 function install_cmake {
-  CMAKE_VERSION="3.6.2"
+  CMAKE_VERSION="3.7.0"
   CMAKE_URL="https://cmake.org/files/v3.6/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz"
   CMAKE_DIR="${DEPS_DIR}/cmake"
   CMAKE_BIN="${CMAKE_DIR}/bin"
