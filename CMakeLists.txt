@@ -15,6 +15,7 @@ add_executable(test_concurrent ${SOURCES})
 
 find_package(Boost 1.62.0 COMPONENTS fiber context) 
 
+MESSAGE("### BOOST ROOT: " $ENV{BOOST_ROOT})
 if (Boost_FOUND)
     set(Boost_USE_STATIC_LIBS ON) 
     set(Boost_USE_MULTITHREADED ON)  
