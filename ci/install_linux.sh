@@ -12,9 +12,9 @@ function install_boost {
   mkdir -p ${BOOST_DIR} && cd ${BOOST_DIR}
   wget -O - ${BOOST_URL} | tar --strip-components=1 -xz -C ${BOOST_DIR} || exit 1
   #echo "using gcc : 5 : /usr/bin/g++-5 ; " >> tools/build/v2/user-config.jam
-  ./bootstrap.sh --with-libraries=${BOOST_LIBRARIES} && ./b2 address-model=64 toolset=gcc-5
-  export BOOST_ROOT=${BOOST_DIR}
-  export BOOST_LIBRARYDIR="${BOOST_DIR}/stage/lib"
+  ./bootstrap.sh --with-libraries=${BOOST_LIBRARIES} && ./b2 address-model=64 toolset=gcc-5 install
+  #export BOOST_ROOT=${BOOST_DIR}
+  #export BOOST_LIBRARYDIR="${BOOST_DIR}/stage/lib"
 }
 
 #function install_cmake {
