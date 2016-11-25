@@ -20,18 +20,19 @@ function install_boost {
   export BOOST_OPTS="-DBOOST_ROOT=${BOOST_ROOT} -DBOOST_INCLUDEDIR=${BOOST_INCLUDE} -DBOOST_LIBRARYDIR=${BOOST_LIBDIR}"
 }
 
-#function install_cmake {
-#  CMAKE_VERSION="3.6.2"
-#  CMAKE_URL="https://cmake.org/files/v3.6/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz"
-#  CMAKE_DIR="${DEPS_DIR}/cmake"
-#  CMAKE_BIN="${CMAKE_DIR}/bin"
-#  echo "Downloading CMake ${CMAKE_VERSION} from ${CMAKE_URL}"
-#  mkdir -p ${CMAKE_DIR}
-#  wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C ${CMAKE_DIR} || exit 1
-#  export PATH=${CMAKE_BIN}:${PATH}
-#}
+function install_cmake {
+  CMAKE_VERSION="3.6.2"
+  CMAKE_URL="https://cmake.org/files/v3.6/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz"
+  CMAKE_DIR="${DEPS_DIR}/cmake"
+  CMAKE_BIN="${CMAKE_DIR}/bin"
+  echo "Downloading CMake ${CMAKE_VERSION} from ${CMAKE_URL}"
+  mkdir -p ${CMAKE_DIR}
+  wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C ${CMAKE_DIR} || exit 1
+  export PATH=${CMAKE_BIN}:${PATH}
+}
 
 install_boost # at least version 1.60
+install_cmake
 echo "Installed build dependecies."
 echo "  - Boost: ${BOOST_ROOT}"
 
