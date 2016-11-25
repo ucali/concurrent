@@ -42,5 +42,5 @@ install: source ci/install_${TRAVIS_OS_NAME}.sh
 script:
   - mkdir build
   - cd build
-  - cmake -DBOOST_ROOT="${TRAVIS_BUILD_DIR}/deps/boost" -DCMAKE_CXX_COMPILER=$COMPILER .. && make 
+  - cmake  -DCMAKE_CXX_COMPILER=$COMPILER .. && make 
   - ./test_concurrent
