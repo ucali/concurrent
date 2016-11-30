@@ -62,7 +62,7 @@ TEST_CASE("TestFiberSingleThread") {
 
 TEST_CASE("TestFiberQueue") {
 	std::cout << "TestFiberQueue -> " << std::endl;
-	concurrent::FiberScheduler fibers;
+	concurrent::FiberScheduler fibers(2);
 
 	concurrent::Channel<int> chan;
 
