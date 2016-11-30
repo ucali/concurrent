@@ -121,12 +121,6 @@ namespace concurrent {
 
 		explicit Pool(size_t s = std::thread::hardware_concurrency()) { init(s); }
 		explicit Pool(const std::function<R(Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s); }
-		explicit Pool(const std::function<R(Args...)>& c,
-			const typename _func_traits<R>::FuncType& t,
-			size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
-		{
-			init(s);
-		}
 
 		~Pool() { Close(); }
 
@@ -192,13 +186,13 @@ namespace concurrent {
 		}
 
 		void Send(const std::function<R()>& c, size_t num = 1) {
+			if (_canGrow.load() && isAlmostFull()) {
+				add(num);
+			}
 			for (int i = 0; i < num; i++) {
 				typename _Task<R>::Ptr ptr(new _Task<R>(c));
 
 				_counter++;
-				if (_canGrow.load() && isAlmostFull()) {
-					add(num);
-				}
 				_msgQ.Push(ptr);
 			}
 		}
@@ -246,10 +240,11 @@ namespace concurrent {
 		}
 
 		void launch(typename Task<R>::Ptr ptr) {
-			_counter++;
 			if (_canGrow.load() && isAlmostFull()) {
 				add(1);
 			}
+			
+			_counter++;
 			_msgQ.Push(ptr);
 		}
 
