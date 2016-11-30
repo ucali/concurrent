@@ -197,7 +197,7 @@ namespace concurrent {
 
 				_counter++;
 				if (isAlmostFull()) {
-					add(2);
+					add(num);
 				}
 				_msgQ.Push(ptr);
 			}
@@ -224,8 +224,7 @@ namespace concurrent {
 				}
 
 				_threads.clear();
-			}
-			catch (...) {
+			} catch (...) {
 				std::cerr << "Error shutting down pool." << std::endl;
 			}
 		}
@@ -234,7 +233,7 @@ namespace concurrent {
 		void init(size_t s) noexcept {
 			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 
-			add(std::max(8l, long(s)));
+			add(long(s));
 		}
 
 		bool isAlmostFull() {
