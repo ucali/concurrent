@@ -196,7 +196,7 @@ namespace concurrent {
 				typename _Task<R>::Ptr ptr(new _Task<R>(c));
 
 				_counter++;
-				if (isAlmostFull()) {
+				if (_canGrow.load() && isAlmostFull()) {
 					add(num);
 				}
 				_msgQ.Push(ptr);
@@ -229,6 +229,10 @@ namespace concurrent {
 			}
 		}
 
+		void CanGrow(bool b) {
+			_canGrow.store(b);
+		}
+
 	private:
 		void init(size_t s) noexcept {
 			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
@@ -243,7 +247,7 @@ namespace concurrent {
 
 		void launch(typename Task<R>::Ptr ptr) {
 			_counter++;
-			if (isAlmostFull()) {
+			if (_canGrow.load() && isAlmostFull()) {
 				add(1);
 			}
 			_msgQ.Push(ptr);
@@ -275,6 +279,7 @@ namespace concurrent {
 		std::vector<std::thread> _threads;
 
 		std::atomic_bool _guard{true};
+		std::atomic_bool _canGrow{true};
 		std::atomic<int>_counter{0};
 
 		mutable std::mutex _mutex;
