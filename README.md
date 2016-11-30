@@ -4,14 +4,16 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/6hj2ar4d2goq54rm/branch/master?svg=true)](https://ci.appveyor.com/project/ucali/concurrent/branch/master)
 
 
-Dependency free, header-only library to simplify long running multistep processing and concurrent computation.
+Header-only library to simplify long running multistep processing and concurrent computation.
+Optional boost dependency for fibers.
+
 Tested with msvc14, gcc5, clang3.7.
 
-TODO: add boost 1.62+ to CI to test the fibers components.
+TODO: fix boost build with clang.
 
 ## Examples:
 
-Fibers (WIP):
+Fibers:
 
 ```c++
 
