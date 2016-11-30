@@ -13,15 +13,19 @@ find_package(Threads REQUIRED)
 
 add_executable(test_concurrent ${SOURCES})
 
+set(Boost_USE_STATIC_LIBS ON) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
+
 find_package(Boost 1.62.0 COMPONENTS fiber context) 
 
-MESSAGE("### BOOST ROOT: " $ENV{BOOST_ROOT})
+MESSAGE("Searching Boost in: " $ENV{BOOST_ROOT})
 if (Boost_FOUND)
-    set(Boost_USE_STATIC_LIBS ON) 
-    set(Boost_USE_MULTITHREADED ON)  
-    set(Boost_USE_STATIC_RUNTIME OFF) 
-
+    MESSAGE("header: " ${Boost_INCLUDE_DIRS})
+    MESSAGE("libs: " ${Boost_LIBRARY_DIRS})
+    
     include_directories(${Boost_INCLUDE_DIRS}) 
+    link_directories(${Boost_LIBRARY_DIRS})
     target_link_libraries(test_concurrent Threads::Threads ${Boost_LIBRARIES})
    
     add_definitions(-DU_WITH_FIBER)
