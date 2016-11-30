@@ -14,10 +14,6 @@ function install_boost {
   #echo "using gcc : 5 : /usr/bin/g++-5 ; " >> tools/build/v2/user-config.jam
   ./bootstrap.sh --with-libraries=${BOOST_LIBRARIES} && ./b2 link=static threading=multi address-model=64 cxxflags=-std=c++11 toolset=gcc-5 
   export BOOST_ROOT="$TRAVIS_BUILD_DIR/deps/boost"
-  export CMAKE_MODULE_PATH="$BOOST_ROOT"
-  export BOOST_INCLUDE="$BOOST_ROOT/include"
-  export BOOST_LIBDIR="$BOOST_ROOT/lib"
-  export BOOST_OPTS="-DBOOST_ROOT=${BOOST_ROOT} -DBOOST_INCLUDEDIR=${BOOST_INCLUDE} -DBOOST_LIBRARYDIR=${BOOST_LIBDIR}"
 }
 
 function install_cmake {

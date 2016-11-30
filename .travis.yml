@@ -43,5 +43,5 @@ script:
   - source ci/install_${TRAVIS_OS_NAME}.sh
   - mkdir build
   - cd build
-  - cmake .. && make 
+  - cmake ${BOOST_OPTS} -DCMAKE_CXX_COMPILER=$COMPILER .. && make 
   - ./test_concurrent
