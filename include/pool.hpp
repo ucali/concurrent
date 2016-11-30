@@ -235,7 +235,6 @@ namespace concurrent {
 			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 
 			add(std::max(8l, long(s)));
-			//add(s);
 		}
 
 		bool isAlmostFull() {
@@ -246,10 +245,9 @@ namespace concurrent {
 		void launch(typename Task<R>::Ptr ptr) {
 			_counter++;
 			if (isAlmostFull()) {
-				add(2);
+				add(1);
 			}
 			_msgQ.Push(ptr);
-
 		}
 
 		void add(size_t s) {
@@ -259,13 +257,13 @@ namespace concurrent {
 						auto h = _msgQ.Pop();
 						if (h != nullptr) {
 							h->Exec();
-							_counter--;
 						}
 					}
 					catch (const std::exception& e) {
 						std::unique_lock<std::mutex> lock(_mutex);
 						_ee(e);
 					}
+					_counter--;
 				}
 			};
 
