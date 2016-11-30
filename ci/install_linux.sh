@@ -12,7 +12,7 @@ function install_boost {
   mkdir -p ${BOOST_DIR} && cd ${BOOST_DIR}
   wget -O - ${BOOST_URL} | tar --strip-components=1 -xz -C ${BOOST_DIR} || exit 1
   #echo "using gcc : 5 : /usr/bin/g++-5 ; " >> tools/build/v2/user-config.jam
-  ./bootstrap.sh --with-libraries=${BOOST_LIBRARIES} && ./b2 link=static threading=multi address-model=64 cxxflags=-std=c++11 toolset=${COMPILER} 
+  ./bootstrap.sh --with-libraries=${BOOST_LIBRARIES} && ./b2 link=static threading=multi address-model=64 cxxflags=-std=c++11 toolset=gcc-5 
   export BOOST_ROOT="$TRAVIS_BUILD_DIR/deps/boost"
   export CMAKE_MODULE_PATH="$BOOST_ROOT"
   export BOOST_INCLUDE="$BOOST_ROOT/include"
