@@ -24,7 +24,6 @@ if (Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS}) 
     target_link_libraries(test_concurrent Threads::Threads ${Boost_LIBRARIES})
    
-    add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DU_WITH_FIBER)
 else()
     target_link_libraries(test_concurrent Threads::Threads)
