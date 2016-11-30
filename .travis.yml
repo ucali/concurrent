@@ -14,7 +14,7 @@ addons:
       
 
 compiler: gcc
-env: COMPILER=g++-5 
+env: COMPILER=g++-5 CXX=g++-5
 
 matrix:
   exclude:
@@ -36,8 +36,11 @@ matrix:
 
 before_install:
   - sudo apt-get -q update && sudo apt-get install valgrind
+  
+#install: source ci/install_${TRAVIS_OS_NAME}.sh
 
 script:
+  - source ci/install_${TRAVIS_OS_NAME}.sh
   - mkdir build
   - cd build
   - cmake -DCMAKE_CXX_COMPILER=$COMPILER .. && make 

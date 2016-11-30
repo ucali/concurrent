@@ -5,9 +5,57 @@
 
 
 Dependency free, header-only library to simplify long running multistep processing and concurrent computation.
-Tested with msvc14, gcc5, clang 3.7.
+Tested with msvc14, gcc5, clang3.7.
+
+TODO: add boost 1.62+ to CI to test the fibers components.
 
 ## Examples:
+
+Fibers (WIP):
+
+```c++
+
+concurrent::FiberScheduler fibers;
+
+int i = 0;
+fibers.Run([&i] {
+    while (i < 1000) {
+        i++;
+        concurrent::yield();
+    }
+});
+
+int j = 0;
+fibers.Run([&j] {
+    while (j < 1000) {
+        j++;
+        concurrent::yield();
+    }
+});
+
+concurrent::Channel<int> chan;
+
+i = 0;
+fibers.Run([&i, &chan] {
+    concurrent::ChannelStatus status = concurrent::ChannelStatus::empty;
+    while (status != concurrent::ChannelStatus::closed) {
+        status = chan.try_pop(i);
+    }
+});
+
+j = 0;
+fibers.Run([&j, &chan]  {
+    while (j < 100000) {
+        j++;
+        chan.push(j);
+    }
+    chan.close();
+});
+
+
+fibers.Close();
+
+```
 
 Processing samples:
 

@@ -13,283 +13,283 @@
 
 namespace concurrent {
 
-namespace {
+	namespace {
 
-template <typename R>
-class _Task {
-public:
-    typedef std::shared_ptr<_Task<R>> Ptr;
+		template <typename R>
+		class _Task {
+		public:
+			typedef std::shared_ptr<_Task<R>> Ptr;
 
-    _Task(const std::function<R()>& c) : _c(c) { }
+			_Task(const std::function<R()>& c) : _c(c) { }
 
-    virtual void Exec();
+			virtual void Exec();
 
-protected:
-    const std::function<R()> _c;
+		protected:
+			const std::function<R()> _c;
 
-    _Task(_Task const&) = delete;
-    _Task& operator=(_Task const&) = delete;
-};
+			_Task(_Task const&) = delete;
+			_Task& operator=(_Task const&) = delete;
+		};
 
-template<typename R>
-void _Task<R>::Exec() { _c(); }
+		template<typename R>
+		void _Task<R>::Exec() { _c(); }
 
-template <typename T>
-struct _func_traits {
-	typedef std::function<void(T)> FuncType;
-};
+		template <typename T>
+		struct _func_traits {
+			typedef std::function<void(T)> FuncType;
+		};
 
-template <>
-struct _func_traits<void> {
-	typedef std::function<void()> FuncType;
-};
- 
+		template <>
+		struct _func_traits<void> {
+			typedef std::function<void()> FuncType;
+		};
 
-template <typename R>
-class Task : public _Task<R> {
-public:
-    typedef std::shared_ptr<Task<R>> Ptr;
 
-    Task(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) : _Task<R>(c), _t(t) {}
-    Task(const std::function<R()>& c) : _Task<R>(c) { _t = [] (R) {}; }
+		template <typename R>
+		class Task : public _Task<R> {
+		public:
+			typedef std::shared_ptr<Task<R>> Ptr;
 
-    virtual void Exec();
+			Task(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) : _Task<R>(c), _t(t) {}
+			Task(const std::function<R()>& c) : _Task<R>(c) { _t = [](R) {}; }
 
-private:
-	typename _func_traits<R>::FuncType _t;
-};
+			virtual void Exec();
 
-template<>
-Task<void>::Task(const std::function<void()>& c) : _Task<void>(c) { _t = []() {}; }
+		private:
+			typename _func_traits<R>::FuncType _t;
+		};
 
-template<>
-void Task<void>::Exec() { this->_c(); this->_t(); }
+		template<>
+		Task<void>::Task(const std::function<void()>& c) : _Task<void>(c) { _t = []() {}; }
 
-template<typename R>
-void Task<R>::Exec() { this->_t(std::move(this->_c())); }
+		template<>
+		void Task<void>::Exec() { this->_c(); this->_t(); }
 
-}
+		template<typename R>
+		void Task<R>::Exec() { this->_t(std::move(this->_c())); }
 
-class WaitGroup {
-public:
-    typedef std::shared_ptr<WaitGroup> Ptr;
-
-    WaitGroup(size_t s) : _s(s) {
-		_c.store(0);
-
-        for (int i = 0; i < s; i++) {
-            _c.fetch_add(1);
-        }
-    }
-
-	void Add() {
-		_c.fetch_add(1);
 	}
 
-	size_t Size() const { return _s; }
+	class WaitGroup {
+	public:
+		typedef std::shared_ptr<WaitGroup> Ptr;
 
-	void Finish() {
-		_c.fetch_sub(1);
-		_empty.notify_all();
-	}
+		WaitGroup(size_t s) : _s(s) {
+			_c.store(0);
 
-
-    void Wait() {
-		std::unique_lock<std::mutex> lock(_mutex);
-		while (_c.load()) {
-			_empty.wait(lock);
+			for (int i = 0; i < s; i++) {
+				_c.fetch_add(1);
+			}
 		}
-    }
 
-private:
-    const size_t _s;
-	std::atomic<unsigned short> _c;
+		void Add() {
+			_c.fetch_add(1);
+		}
+
+		size_t Size() const { return _s; }
+
+		void Finish() {
+			_c.fetch_sub(1);
+			_empty.notify_all();
+		}
 
 
-    mutable std::mutex _mutex;
-    std::condition_variable _empty;
+		void Wait() {
+			std::unique_lock<std::mutex> lock(_mutex);
+			while (_c.load()) {
+				_empty.wait(lock);
+			}
+		}
 
-    WaitGroup(WaitGroup const&) = delete;
-    WaitGroup& operator=(WaitGroup const&) = delete;
+	private:
+		const size_t _s;
+		std::atomic<unsigned short> _c;
 
-};
 
-template <typename R = void, typename ...Args>
-class Pool {
-public:
-    typedef std::shared_ptr<Pool<R, Args...>> Ptr;
+		mutable std::mutex _mutex;
+		std::condition_variable _empty;
 
-    explicit Pool(size_t s = std::thread::hardware_concurrency()) { init(s); }
-    explicit Pool(const std::function<R (Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s);}
-    explicit Pool(const std::function<R (Args...)>& c,
-                  const typename _func_traits<R>::FuncType& t,
-                  size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
-    { init(s); }
+		WaitGroup(WaitGroup const&) = delete;
+		WaitGroup& operator=(WaitGroup const&) = delete;
 
-	~Pool() { Close(); }
+	};
 
-    bool IsRunning() const { return _guard.load(); }
-    size_t Size() const { 
-		std::unique_lock<std::mutex> lock(_mutex); 
-		return _threads.size(); 
-	}
+	template <typename R = void, typename ...Args>
+	class Pool {
+	public:
+		typedef std::shared_ptr<Pool<R, Args...>> Ptr;
 
-	void OnException(const std::function<void(const std::exception&)>& f) { 
-		std::unique_lock<std::mutex> lock(_mutex);
-		_ee = f; 
-	}
+		explicit Pool(size_t s = std::thread::hardware_concurrency()) { init(s); }
+		explicit Pool(const std::function<R(Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s); }
+		explicit Pool(const std::function<R(Args...)>& c,
+			const typename _func_traits<R>::FuncType& t,
+			size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
+		{
+			init(s);
+		}
 
-    template <typename ..._Args>
-    void Spawn(const std::function<void (_Args...)>& c, _Args... args) {
-        if (IsRunning() == false) {
-            return; //Throw
-        }
+		~Pool() { Close(); }
 
-        auto func = std::bind(c, args...);
+		bool IsRunning() const { return _guard.load(); }
+		size_t Size() const {
+			std::unique_lock<std::mutex> lock(_mutex);
+			return _threads.size();
+		}
 
-        std::unique_lock<std::mutex> lock(_mutex);
-        _threads.emplace_back(func);
-    }
+		void OnException(const std::function<void(const std::exception&)>& f) {
+			std::unique_lock<std::mutex> lock(_mutex);
+			_ee = f;
+		}
 
-    void Spawn(const std::function<void ()>& c) {
-        if (IsRunning() == false) {
-            return; //Throw
-        }
+		template <typename ..._Args>
+		void Spawn(const std::function<void(_Args...)>& c, _Args... args) {
+			if (IsRunning() == false) {
+				return; //Throw
+			}
 
-        std::unique_lock<std::mutex> lock(_mutex);
-        _threads.emplace_back(c);
-    }
+			auto func = std::bind(c, args...);
 
-    template <typename ..._Args>
-    void Send(const std::function<void (_Args...)>& c, _Args... args) {
-        auto fun = std::bind(c, args...);
-        Task<void>::Ptr ptr(new Task<void>(fun));
+			std::unique_lock<std::mutex> lock(_mutex);
+			_threads.emplace_back(func);
+		}
 
-		launch(ptr);
-    }
+		void Spawn(const std::function<void()>& c) {
+			if (IsRunning() == false) {
+				return; //Throw
+			}
 
-    template <typename ..._Args>
-    void Send(const std::function<R (_Args...)>& c, const typename _func_traits<R>::FuncType& t, _Args... args) {
-        auto fun = std::bind(c, args...);
-        typename Task<R>::Ptr ptr(new Task<R>(fun, t));
+			std::unique_lock<std::mutex> lock(_mutex);
+			_threads.emplace_back(c);
+		}
 
-		launch(ptr);
-    }
+		template <typename ..._Args>
+		void Send(const std::function<void(_Args...)>& c, _Args... args) {
+			auto fun = std::bind(c, args...);
+			Task<void>::Ptr ptr(new Task<void>(fun));
 
-	void Send(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) {
-		typename Task<R>::Ptr ptr(new Task<R>(c, t));
-		launch(ptr);
-	}
+			launch(ptr);
+		}
 
-    template <typename ..._Args>
-    void Call(_Args... args) {
-        auto fun = std::bind(_c, args...);
-        typename Task<R>::Ptr ptr(new Task<R>(fun));
+		template <typename ..._Args>
+		void Send(const std::function<R(_Args...)>& c, const typename _func_traits<R>::FuncType& t, _Args... args) {
+			auto fun = std::bind(c, args...);
+			typename Task<R>::Ptr ptr(new Task<R>(fun, t));
 
-        launch(ptr);
-    }
+			launch(ptr);
+		}
 
-	void Send(const std::function<R()>& c, size_t num = 1) {
-		for (int i = 0; i < num; i++) {
-			typename _Task<R>::Ptr ptr(new _Task<R>(c));
+		void Send(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) {
+			typename Task<R>::Ptr ptr(new Task<R>(c, t));
+			launch(ptr);
+		}
 
+		template <typename ..._Args>
+		void Call(_Args... args) {
+			auto fun = std::bind(_c, args...);
+			typename Task<R>::Ptr ptr(new Task<R>(fun));
+
+			launch(ptr);
+		}
+
+		void Send(const std::function<R()>& c, size_t num = 1) {
+			for (int i = 0; i < num; i++) {
+				typename _Task<R>::Ptr ptr(new _Task<R>(c));
+
+				_counter++;
+				if (isAlmostFull()) {
+					add(2);
+				}
+				_msgQ.Push(ptr);
+			}
+		}
+
+		void Close() {
+			try {
+				std::unique_lock<std::mutex> lock(_mutex);
+
+				if (_threads.empty()) {
+					return;
+				}
+
+				_guard.store(false);
+
+				for (auto i = 0; i < _threads.size(); i++) {
+					_msgQ.Push(nullptr);
+				}
+
+				for (auto& t : _threads) {
+					if (t.joinable()) {
+						t.join();
+					}
+				}
+
+				_threads.clear();
+			}
+			catch (...) {
+				std::cerr << "Error shutting down pool." << std::endl;
+			}
+		}
+
+	private:
+		void init(size_t s) noexcept {
+			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
+
+			add(std::max(8l, long(s)));
+			//add(s);
+		}
+
+		bool isAlmostFull() {
+			std::unique_lock<std::mutex> lock(_mutex);
+			return _threads.size() - _counter <= 2;
+		}
+
+		void launch(typename Task<R>::Ptr ptr) {
 			_counter++;
 			if (isAlmostFull()) {
 				add(2);
 			}
 			_msgQ.Push(ptr);
+
 		}
-	}
 
-    void Close() {
-		try {
-			std::unique_lock<std::mutex> lock(_mutex);
-
-			if (_threads.empty()) {
-				return;
-			}
-
-			_guard.store(false);
-
-			for (auto i = 0; i < _threads.size(); i++) {
-				_msgQ.Push(nullptr);
-			}
-
-			for (auto& t : _threads) {
-				if (t.joinable()) {
-					t.join();
-				}
-			}
-
-			_threads.clear();
-		}
-		catch (...) {
-			std::cerr << "Error shutting down pool." << std::endl; 
-		}
-    }
-
-private:
-    void init(size_t s) noexcept {
-        _guard.store(true);
-        _counter.store(0);
-
-        add(std::max(8l, long(s)));
-
-        _ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
-    }
-
-	bool isAlmostFull() {
-		std::unique_lock<std::mutex> lock(_mutex);
-        return _threads.size() - _counter <= 2;
-	}
-
-	void launch(typename Task<R>::Ptr ptr) {
-		_counter++;
-		if (isAlmostFull()) {
-            add(2);
-		}
-        _msgQ.Push(ptr);
-
-	}
-
-	void add(size_t s) {
-		auto func = [this] {
-			while (IsRunning()) {
-				try {
-					auto h = _msgQ.Pop();
-					if (h != nullptr) {
-						h->Exec();
-						_counter--;
+		void add(size_t s) {
+			auto func = [this] {
+				while (IsRunning()) {
+					try {
+						auto h = _msgQ.Pop();
+						if (h != nullptr) {
+							h->Exec();
+							_counter--;
+						}
+					}
+					catch (const std::exception& e) {
+						std::unique_lock<std::mutex> lock(_mutex);
+						_ee(e);
 					}
 				}
-				catch (const std::exception& e) {
-					std::unique_lock<std::mutex> lock(_mutex);
-					_ee(e);
-				}
+			};
+
+			for (int i = 0; i < s; i++) {
+				_threads.emplace_back(func);
 			}
-		};
-
-		for (int i = 0; i < s; i++) {
-			_threads.emplace_back(func);
 		}
-	}
 
-    SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;
-    std::vector<std::thread> _threads;
+		SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;
+		std::vector<std::thread> _threads;
 
-    std::atomic_bool _guard;
-    std::atomic<int>_counter;
+		std::atomic_bool _guard{true};
+		std::atomic<int>_counter{0};
 
-    mutable std::mutex _mutex;
+		mutable std::mutex _mutex;
 
 
-    Pool(Pool const&) = delete;
-    Pool& operator=(Pool const&) = delete;
+		Pool(Pool const&) = delete;
+		Pool& operator=(Pool const&) = delete;
 
-    const std::function<R (Args...)> _c;
-    const typename _func_traits<R>::FuncType _t;
-	std::function<void(const std::exception&)> _ee;
-};
+		const std::function<R(Args...)> _c;
+		const typename _func_traits<R>::FuncType _t;
+		std::function<void(const std::exception&)> _ee;
+	};
 
 }
 
