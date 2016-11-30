@@ -43,10 +43,12 @@ public:
 	}
 
 	void Close() {
-		_running.store(false);
-		_cnd.notify_all();
+		if (_pool->IsRunning()) {
+			_running.store(false);
+			_cnd.notify_all();
 
-		_pool->Close();
+			_pool->Close();
+		}
 	}
 
 
