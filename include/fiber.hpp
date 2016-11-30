@@ -30,13 +30,6 @@ public:
 		}, num);
 	}
 
-	template <typename ..._Args>
-	void Run(const std::function<void(_Args...)>& c, _Args... args) {
-		auto fun = std::bind(c, args...);
-
-		Send(fun);
-	}
-
 	void Run(const std::function<void()>& fun) {
 		_counter.fetch_add(1);
 		typename Task<void>::Ptr ptr(new Task<void>(fun, [this] {

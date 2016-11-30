@@ -32,8 +32,8 @@ TEST_CASE("TestFiberInit") {
 	std::cout << "<- TestFiberInit" << std::endl;
 }
 
-TEST_CASE("TestFiberSingleThread") {
-	std::cout << "TestFiberSingleThread -> " << std::endl;
+TEST_CASE("TestFiberThread") {
+	std::cout << "TestFiberThread -> " << std::endl;
 	concurrent::FiberScheduler fiber(4);
 
 	int i = 0;
@@ -57,7 +57,7 @@ TEST_CASE("TestFiberSingleThread") {
 
 	REQUIRE(i == 100000);
 	REQUIRE(j == i);
-	std::cout << "<- TestFiberSingleThread" << std::endl;
+	std::cout << "<- TestFiberThread" << std::endl;
 }
 
 TEST_CASE("TestFiberQueue") {
