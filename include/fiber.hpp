@@ -2,7 +2,7 @@
 #define U_CONCURRENT_FIBER_HPP
 #ifdef U_WITH_FIBER
 
-#include <boost\fiber\all.hpp>
+#include <boost/fiber/all.hpp>
 
 #include "pool.hpp"
 
