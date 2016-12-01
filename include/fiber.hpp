@@ -41,7 +41,6 @@ public:
 			_cnd.notify_all();
 		}));
 			
-		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
 		boost::fibers::fiber([ptr] {
 			ptr->Exec();
 		}).detach();
