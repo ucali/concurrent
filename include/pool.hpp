@@ -121,12 +121,6 @@ namespace concurrent {
 
 		explicit Pool(size_t s = std::thread::hardware_concurrency()) { init(s); }
 		explicit Pool(const std::function<R(Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s); }
-		explicit Pool(const std::function<R(Args...)>& c,
-			const typename _func_traits<R>::FuncType& t,
-			size_t s = std::thread::hardware_concurrency()) : _c(c), _t(t)
-		{
-			init(s);
-		}
 
 		~Pool() { Close(); }
 
@@ -192,13 +186,13 @@ namespace concurrent {
 		}
 
 		void Send(const std::function<R()>& c, size_t num = 1) {
+			if (_canGrow.load() && isAlmostFull()) {
+				add(num);
+			}
 			for (int i = 0; i < num; i++) {
 				typename _Task<R>::Ptr ptr(new _Task<R>(c));
 
 				_counter++;
-				if (isAlmostFull()) {
-					add(2);
-				}
 				_msgQ.Push(ptr);
 			}
 		}
@@ -224,18 +218,20 @@ namespace concurrent {
 				}
 
 				_threads.clear();
-			}
-			catch (...) {
+			} catch (...) {
 				std::cerr << "Error shutting down pool." << std::endl;
 			}
+		}
+
+		void CanGrow(bool b) {
+			_canGrow.store(b);
 		}
 
 	private:
 		void init(size_t s) noexcept {
 			_ee = [](const std::exception& e) { std::cerr << "Error: " << e.what() << std::endl; };
 
-			add(std::max(8l, long(s)));
-			//add(s);
+			add(long(s));
 		}
 
 		bool isAlmostFull() {
@@ -244,12 +240,12 @@ namespace concurrent {
 		}
 
 		void launch(typename Task<R>::Ptr ptr) {
-			_counter++;
-			if (isAlmostFull()) {
-				add(2);
+			if (_canGrow.load() && isAlmostFull()) {
+				add(1);
 			}
+			
+			_counter++;
 			_msgQ.Push(ptr);
-
 		}
 
 		void add(size_t s) {
@@ -259,13 +255,13 @@ namespace concurrent {
 						auto h = _msgQ.Pop();
 						if (h != nullptr) {
 							h->Exec();
-							_counter--;
 						}
 					}
 					catch (const std::exception& e) {
 						std::unique_lock<std::mutex> lock(_mutex);
 						_ee(e);
 					}
+					_counter--;
 				}
 			};
 
@@ -278,6 +274,7 @@ namespace concurrent {
 		std::vector<std::thread> _threads;
 
 		std::atomic_bool _guard{true};
+		std::atomic_bool _canGrow{true};
 		std::atomic<int>_counter{0};
 
 		mutable std::mutex _mutex;

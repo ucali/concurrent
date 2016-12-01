@@ -7,6 +7,7 @@
 TEST_CASE("TestFiberInit") {
 	std::cout << "TestFiberInit -> " << std::endl;
 	concurrent::FiberScheduler fiber;
+	REQUIRE(fiber.ThreadNum() == 1);
 
 	int i = 0;
 	fiber.Run([&i](){
@@ -25,6 +26,7 @@ TEST_CASE("TestFiberInit") {
 	});
 
 
+	REQUIRE(fiber.ThreadNum() == 1);
 	fiber.Close();
 
 	REQUIRE(i == 1000);
@@ -32,9 +34,10 @@ TEST_CASE("TestFiberInit") {
 	std::cout << "<- TestFiberInit" << std::endl;
 }
 
-TEST_CASE("TestFiberSingleThread") {
-	std::cout << "TestFiberSingleThread -> " << std::endl;
+TEST_CASE("TestFiberThread") {
+	std::cout << "TestFiberThread -> " << std::endl;
 	concurrent::FiberScheduler fiber(4);
+	REQUIRE(fiber.ThreadNum() == 4);
 
 	int i = 0;
 	fiber.Run([&i]() {
@@ -53,16 +56,18 @@ TEST_CASE("TestFiberSingleThread") {
 	});
 
 
+	REQUIRE(fiber.ThreadNum() == 4);
 	fiber.Close();
 
 	REQUIRE(i == 100000);
 	REQUIRE(j == i);
-	std::cout << "<- TestFiberSingleThread" << std::endl;
+	std::cout << "<- TestFiberThread" << std::endl;
 }
 
 TEST_CASE("TestFiberQueue") {
 	std::cout << "TestFiberQueue -> " << std::endl;
 	concurrent::FiberScheduler fibers;
+	REQUIRE(fibers.ThreadNum() == 1);
 
 	concurrent::Channel<int> chan;
 
@@ -86,6 +91,7 @@ TEST_CASE("TestFiberQueue") {
 	});
 
 
+	REQUIRE(fibers.ThreadNum() == 1);
 	fibers.Close();
 
 	REQUIRE(i == 100000);

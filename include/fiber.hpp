@@ -20,8 +20,7 @@ public:
 		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
 
 		_pool = Pool<>::Ptr(new Pool<>(num));
-		//_pool->canGrow(false);
-
+		_pool->CanGrow(false);
 		_pool->Send([this] {
 			boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
 			lock_t lock(_mutex);
@@ -31,11 +30,8 @@ public:
 		}, num);
 	}
 
-	template <typename ..._Args>
-	void Run(const std::function<void(_Args...)>& c, _Args... args) {
-		auto fun = std::bind(c, args...);
-
-		Send(fun);
+	size_t ThreadNum() {
+		return _pool->Size();
 	}
 
 	void Run(const std::function<void()>& fun) {
@@ -44,7 +40,8 @@ public:
 			_counter.fetch_sub(1);
 			_cnd.notify_all();
 		}));
-
+			
+		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
 		boost::fibers::fiber([ptr] {
 			ptr->Exec();
 		}).detach();
@@ -52,9 +49,11 @@ public:
 
 	void Close() {
 		_running.store(false);
-		_cnd.notify_all();
+		if (_pool->IsRunning()) {
+			_cnd.notify_all();
 
-		_pool->Close();
+			_pool->Close();
+		}
 	}
 
 
