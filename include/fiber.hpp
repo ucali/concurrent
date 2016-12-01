@@ -30,13 +30,18 @@ public:
 		}, num);
 	}
 
+	size_t ThreadNum() {
+		return _pool->Size();
+	}
+
 	void Run(const std::function<void()>& fun) {
 		_counter.fetch_add(1);
 		typename Task<void>::Ptr ptr(new Task<void>(fun, [this] {
 			_counter.fetch_sub(1);
 			_cnd.notify_all();
 		}));
-
+			
+		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
 		boost::fibers::fiber([ptr] {
 			ptr->Exec();
 		}).detach();
