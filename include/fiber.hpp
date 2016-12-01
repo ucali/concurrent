@@ -41,14 +41,15 @@ public:
 			_cnd.notify_all();
 		}));
 			
+		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
 		boost::fibers::fiber([ptr] {
 			ptr->Exec();
 		}).detach();
 	}
 
 	void Close() {
+		_running.store(false);
 		if (_pool->IsRunning()) {
-			_running.store(false);
 			_cnd.notify_all();
 
 			_pool->Close();
