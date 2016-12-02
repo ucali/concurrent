@@ -249,23 +249,22 @@ namespace concurrent {
 		}
 
 		void add(size_t s) {
-			auto func = [this] {
-				while (IsRunning()) {
-					try {
-						auto h = _msgQ.Pop();
-						if (h != nullptr) {
-							h->Exec();
-						}
-					}
-					catch (const std::exception& e) {
-						std::unique_lock<std::mutex> lock(_mutex);
-						_ee(e);
-					}
-					_counter--;
-				}
-			};
-
 			for (int i = 0; i < s; i++) {
+				auto func = [this] {
+					while (IsRunning()) {
+						try {
+							auto h = _msgQ.Pop();
+							if (h != nullptr) {
+								h->Exec();
+							}
+						}
+						catch (const std::exception& e) {
+							std::unique_lock<std::mutex> lock(_mutex);
+							_ee(e);
+						}
+						_counter--;
+					}
+				};
 				_threads.emplace_back(func);
 			}
 		}
