@@ -41,7 +41,7 @@ public:
 			_cnd.notify_all();
 		}));
 			
-	#ifndef WIN32
+	#ifdef __linux__
 		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
 	#endif
 		boost::fibers::fiber([ptr] {
