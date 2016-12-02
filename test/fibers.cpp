@@ -64,6 +64,44 @@ TEST_CASE("TestFiberThread") {
 	std::cout << "<- TestFiberThread" << std::endl;
 }
 
+TEST_CASE("TestFiberProc") {
+	std::cout << "TestFiberProc -> " << std::endl;
+	concurrent::FiberScheduler fiber(4);
+	REQUIRE(fiber.ThreadNum() == 4);
+
+	int i = 0;
+	fiber.Run([&i]() {
+		while (i < 100000) {
+			i++;
+			concurrent::yield();
+		}
+	});
+
+	int k{0};
+	while (k++ < 100) {
+		fiber.Run([]() {
+			concurrent::yield();
+			std::this_thread::sleep_for(5*std::chrono::milliseconds(1));
+		});
+	}
+
+	int j = 0;
+	fiber.Run([&j]() {
+		while (j < 100000) {
+			j++;
+			concurrent::yield();
+		}
+	});
+
+
+	REQUIRE(fiber.ThreadNum() == 4);
+	fiber.Close();
+
+	REQUIRE(i == 100000);
+	REQUIRE(j == i);
+	std::cout << "<- TestFiberProc" << std::endl;
+}
+
 TEST_CASE("TestFiberQueue") {
 	std::cout << "TestFiberQueue -> " << std::endl;
 	concurrent::FiberScheduler fibers;
@@ -79,6 +117,16 @@ TEST_CASE("TestFiberQueue") {
 		}
 		std::cout << "Quit receive" << std::endl;
 	});
+
+	int k{0};
+	while (k++ < 50) {
+		fibers.Run([]() {
+			std::this_thread::sleep_for(5*std::chrono::milliseconds(10));
+			concurrent::yield();
+			std::this_thread::sleep_for(5*std::chrono::milliseconds(10));
+		});
+	}
+
 
 	int j = 0;
 	fibers.Run([&j, &chan]() {
