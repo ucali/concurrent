@@ -17,6 +17,8 @@ class FiberScheduler {
 public:
 
 	FiberScheduler(size_t num = 1) {
+		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
+
 		_pool = Pool<>::Ptr(new Pool<>(num));
 		_pool->CanGrow(false);
 		_pool->Send([this] {
@@ -26,8 +28,6 @@ public:
 				return _running == false && _counter.load() == 0; 
 			});
 		}, num);
-		
-		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
 	}
 
 	size_t ThreadNum() {
