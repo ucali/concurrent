@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.7.0)
 project(concurrent C CXX)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
@@ -12,6 +12,8 @@ add_definitions(-DNOMINMAX)
 find_package(Threads REQUIRED)
 
 add_executable(test_concurrent ${SOURCES})
+
+target_link_libraries(test_concurrent Threads::Threads)
 
 set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  
@@ -28,9 +30,15 @@ if (Boost_FOUND)
     link_directories(${Boost_LIBRARY_DIRS})
     target_link_libraries(test_concurrent Threads::Threads ${Boost_LIBRARIES})
    
-    add_definitions(-DU_WITH_FIBER)
-else()
-    target_link_libraries(test_concurrent Threads::Threads)
+    add_definitions(-DU_WITH_BOOST)
+endif()
+
+find_package(OpenCL)
+if (OpenCL_FOUND) 
+    include_directories(${OpenCL_INCLUDE_DIRS})
+    target_link_libraries(test_concurrent ${OpenCL_LIBRARY})
+    
+    add_definitions(-DU_WITH_OPENCL)
 endif()
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
