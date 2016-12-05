@@ -1,6 +1,6 @@
 #include "catch.hpp"
 
-#ifdef U_WITH_FIBER
+#ifdef U_WITH_BOOST
 
 #include "fiber.hpp"
 

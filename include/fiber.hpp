@@ -1,6 +1,6 @@
 #ifndef U_CONCURRENT_FIBER_HPP
 #define U_CONCURRENT_FIBER_HPP
-#ifdef U_WITH_FIBER
+#ifdef U_WITH_BOOST
 
 #include <boost/fiber/all.hpp>
 
