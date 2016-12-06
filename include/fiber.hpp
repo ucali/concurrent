@@ -59,6 +59,8 @@ public:
 		}
 	}
 
+	int Active() const { return _counter.load(); }
+
 
 	~FiberScheduler() {
 		Close();

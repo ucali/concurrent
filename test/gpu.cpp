@@ -7,15 +7,30 @@
 using namespace concurrent;
 
 TEST_CASE("TestClInit") {
-    std::cout << "TestClInit" << std::endl;
+    std::cout << "TestClInit ->" << std::endl;
 
-    auto amd = cl::Host::WithPlatform(cl::Host::AMD);
-    REQUIRE(amd != nullptr);
-    std::cout << amd->platform().name() << std::endl;
+    auto platform = cl::Host::WithPlatform(cl::Host::AMD);
+    REQUIRE(platform != nullptr);
+    std::cout << platform->platform().name() << std::endl;
 
-    auto intel = cl::Host::WithPlatform(cl::Host::INTEL);
-    REQUIRE(intel != nullptr);
-    std::cout << intel->platform().name() << std::endl;
+    platform = cl::Host::WithPlatform(cl::Host::INTEL);
+    REQUIRE(platform != nullptr);
+    std::cout << platform->platform().name() << std::endl;
+}
+
+TEST_CASE("TestClContext") {
+    std::cout << "TestClContext ->" << std::endl;
+
+    auto platform = cl::Host::WithPlatform(cl::Host::AMD);
+    auto context = platform->NewFullContext();
+
+    auto cpu = context->CPU(0);
+    REQUIRE(cpu != nullptr);
+    std::cout << cpu->device().name() << std::endl;
+
+    auto gpu = context->GPU(0);
+    REQUIRE(gpu != nullptr);
+    std::cout << gpu->device().name() << std::endl;
 }
 
 #endif

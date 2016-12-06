@@ -27,7 +27,9 @@ TEST_CASE("TestFiberInit") {
 
 
 	REQUIRE(fiber.ThreadNum() == 1);
+	REQUIRE(fiber.Active() !=  0);
 	fiber.Close();
+	REQUIRE(fiber.Active() ==  0);
 
 	REQUIRE(i == 1000);
 	REQUIRE(j == i);
@@ -56,8 +58,10 @@ TEST_CASE("TestFiberThread") {
 	});
 
 
+	REQUIRE(fiber.Active() ==  2);
 	REQUIRE(fiber.ThreadNum() == 4);
 	fiber.Close();
+	REQUIRE(fiber.Active() ==  0);
 
 	REQUIRE(i == 100000);
 	REQUIRE(j == i);
@@ -95,7 +99,9 @@ TEST_CASE("TestFiberProc") {
 
 
 	REQUIRE(fiber.ThreadNum() == 4);
+	REQUIRE(fiber.Active() !=  0);
 	fiber.Close();
+	REQUIRE(fiber.Active() ==  0);
 
 	REQUIRE(i == 100000);
 	REQUIRE(j == i);
