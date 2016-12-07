@@ -13,6 +13,17 @@ TODO: fix boost build with clang.
 
 ## Examples:
 
+GPU:
+
+```c++
+
+cl::SharedComputeBridge bridge(cl::Host::AMD);
+bridge.ComputeOnCPU(rand_sample);
+bridge.ComputeOnGPU(rand_sample);
+bridge.Close();
+
+```
+
 Fibers:
 
 ```c++
