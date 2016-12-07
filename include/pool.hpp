@@ -251,14 +251,15 @@ namespace concurrent {
 		void add(size_t s) {
 			for (int i = 0; i < s; i++) {
 				auto func = [this] {
-					while (IsRunning()) {
+					while (IsRunning() || _msgQ.CanReceive()) {
 						try {
 							auto h = _msgQ.Pop();
-							if (h != nullptr) {
-								h->Exec();
+							if (h == nullptr) {
+								_counter--;
+								break;
 							}
-						}
-						catch (const std::exception& e) {
+							h->Exec();
+						} catch (const std::exception& e) {
 							std::unique_lock<std::mutex> lock(_mutex);
 							_ee(e);
 						}

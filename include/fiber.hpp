@@ -1,6 +1,6 @@
 #ifndef U_CONCURRENT_FIBER_HPP
 #define U_CONCURRENT_FIBER_HPP
-#ifdef U_WITH_FIBER
+#ifdef U_WITH_BOOST
 
 #include <boost/fiber/all.hpp>
 
@@ -22,11 +22,15 @@ public:
 		_pool = Pool<>::Ptr(new Pool<>(num));
 		_pool->CanGrow(false);
 		_pool->Send([this] {
-			boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
-			lock_t lock(_mutex);
-			_cnd.wait(lock, [this] { 
-				return _running == false && _counter.load() == 0; 
-			});
+			try {
+				boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
+				lock_t lock(_mutex);
+				_cnd.wait(lock, [this] { 
+					return _running == false && _counter.load() == 0; 
+				});
+			} catch (const std::exception& e) {
+				std::cerr << e.what() << std::endl;
+			}
 		}, num);
 		
 	}
@@ -42,9 +46,6 @@ public:
 			_cnd.notify_all();
 		}));
 			
-	#ifdef LINUX
-		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
-	#endif
 		boost::fibers::fiber([ptr] {
 			ptr->Exec();
 		}).detach();
@@ -58,6 +59,8 @@ public:
 			_pool->Close();
 		}
 	}
+
+	int Active() const { return _counter.load(); }
 
 
 	~FiberScheduler() {
