@@ -56,12 +56,15 @@ public:
 	}
 
 	void Close() {
+		std::cout << "Close requested" << std::endl;
 		_running.store(false);
 		if (_pool->IsRunning()) {
+			std::cout << "Shutdown.." << std::endl;
 			_cnd.notify_all();
 
 			_pool->Close();
 		}
+		std::cout << "Closed" << std::endl;
 	}
 
 	int Active() const { return _counter.load(); }
