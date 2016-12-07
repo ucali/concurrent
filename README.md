@@ -18,8 +18,8 @@ GPU:
 ```c++
 
 cl::SharedComputeBridge bridge(cl::Host::AMD);
-bridge.ComputeOnCPU(rand_sample);
-bridge.ComputeOnGPU(rand_sample);
+bridge.ComputeOnCPU([] (auto& context, auto& queue) {});
+bridge.ComputeOnGPU([] (auto& context, auto& queue) {});
 bridge.Close();
 
 ```
