@@ -14,9 +14,10 @@ class Task {
 public:
     typedef std::shared_ptr<Task> Ptr;
 
-    virtual void Run(boost::compute::command_queue&) = 0;
-
+    virtual void Run(boost::compute::context&, boost::compute::command_queue&) = 0;
 };
+
+typedef std::function<void (boost::compute::context&, boost::compute::command_queue&)> TaskFunc;
 
 class Channel {
 public:
@@ -42,8 +43,12 @@ public:
         return _device.type() == CL_DEVICE_TYPE_CPU;
     }
 
-    void Push(Task::Ptr task) {
+    void Compute(Task::Ptr task) {
+        task->Run(_context, _queue);
+    }
 
+    void Compute(const TaskFunc& func) {
+        func(_context, _queue);
     }
 
     const boost::compute::device& device() const { return _device; }
