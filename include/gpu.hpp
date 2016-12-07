@@ -7,17 +7,32 @@
 #include <boost/compute.hpp>
 #include <boost/compute/system.hpp>
 
+#include "pool.hpp"
+
 namespace concurrent {
 namespace cl {
+
+typedef std::function<void (boost::compute::context&, boost::compute::command_queue&)> TaskFunc;
 
 class Task {
 public:
     typedef std::shared_ptr<Task> Ptr;
+    virtual ~Task() { }
 
     virtual void Run(boost::compute::context&, boost::compute::command_queue&) = 0;
 };
 
-typedef std::function<void (boost::compute::context&, boost::compute::command_queue&)> TaskFunc;
+class FuncEnvelope : public Task {
+public:
+    FuncEnvelope(const TaskFunc& f) : _func(f) {}
+
+    virtual void Run(boost::compute::context& c, boost::compute::command_queue& q) override {
+        _func(c, q);
+    }
+
+private:
+    TaskFunc _func;
+};
 
 class Channel {
 public:
@@ -74,6 +89,10 @@ public:
             throw new std::runtime_error("Unknown device");
          }
     }
+
+    size_t CountGPU() const { return _gpus.size(); }
+    size_t CountCPU() const { return _cpus.size(); }
+    size_t Count() const { return CountGPU() + CountCPU(); }
 
     const Channel::Ptr GPU(short i) const { return _gpus.at(i); }
     const Channel::Ptr CPU(short i) const { return _cpus.at(i); }
@@ -185,8 +204,91 @@ private:
     const Platform _platformId;
 };
 
+class ComputeBridge {
+public:
+    ComputeBridge(Host::Platform platform) : _host(cl::Host::WithPlatform(platform)) {}
+    ~ComputeBridge() { Close(); }
 
+    void Close() { 
+        _cpuQ.Close();
+        _gpuQ.Close();
+        
+        _pool->Close();
+    }
 
+    void ComputeOnGPU(Task::Ptr task) {
+        _gpuQ.Push(task);
+    }
+
+    void ComputeOnGPU(const TaskFunc& func) {
+        _gpuQ.Push(Task::Ptr(new FuncEnvelope(func)));
+    }
+
+    void ComputeOnCPU(Task::Ptr task) {
+       _cpuQ.Push(task);
+    }
+
+    void ComputeOnCPU(const TaskFunc& func) {
+        _cpuQ.Push(Task::Ptr(new FuncEnvelope(func)));
+    }
+
+protected:
+    void _loop(Channel::Ptr chan, SyncQueue<Task::Ptr>& queue) {
+        while (queue.CanReceive()) {
+            auto task = queue.Pop();
+            if (task != nullptr) {
+                chan->Compute(task);
+            }
+        }
+    }
+
+    SyncQueue<Task::Ptr>& cpuQ() { return _cpuQ; }
+    SyncQueue<Task::Ptr>& gpuQ() { return _gpuQ; }
+    Host::Ptr host() { return _host; }
+    
+	Pool<>::Ptr _pool;
+
+private:
+    Host::Ptr _host;
+    
+    SyncQueue<Task::Ptr> _cpuQ;
+    SyncQueue<Task::Ptr> _gpuQ;
+};
+
+class SharedComputeBridge : public ComputeBridge {
+public:
+    SharedComputeBridge(Host::Platform platform) : ComputeBridge(platform) {
+        Context::Ptr context = host()->NewFullContext();
+
+        _pool.reset(new Pool<>(2));
+        _pool->Send([this, context] {
+            auto chan = context->CPU(0);
+            _loop(chan, cpuQ());
+        });
+        _pool->Send([this, context] {
+            auto chan = context->GPU(0);
+            _loop(chan, gpuQ());
+        });
+    }
+};
+
+class IndipendentComputeBridge : public ComputeBridge {
+public:
+    IndipendentComputeBridge(Host::Platform platform) : ComputeBridge(platform) {
+        _pool.reset(new Pool<>(2));
+        Context::Ptr cpu = host()->NewCPU();
+        _pool->Send([this, cpu] {
+            auto chan = cpu->CPU(0);
+            _loop(chan, cpuQ());
+        });
+
+        Context::Ptr gpu = host()->NewGPU();
+        _pool->Send([this, gpu] {
+            auto chan = gpu->GPU(0);
+            _loop(chan, gpuQ());
+        });
+    }
+};
 
 }}
 
