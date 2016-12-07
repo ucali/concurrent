@@ -23,14 +23,14 @@ public:
 		_pool->CanGrow(false);
 		_pool->Send([this] {
 			try {
-				std::cout << std::this_thread::get_id(); << std::endl;
+				std::cout << std::this_thread::get_id() << std::endl;
 				boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
 				lock_t lock(_mutex);
 				_cnd.wait(lock, [this] { 
 					return _running == false && _counter.load() == 0; 
 				});
 				std::cout << "Work terminated" << std::endl;
-				std::cout << std::this_thread::get_id(); << std::endl;
+				std::cout << std::this_thread::get_id() << std::endl;
 			} catch (const std::exception& e) {
 				std::cerr << e.what() << std::endl;
 			}
