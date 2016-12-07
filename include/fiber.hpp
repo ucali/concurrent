@@ -22,11 +22,16 @@ public:
 		_pool = Pool<>::Ptr(new Pool<>(num));
 		_pool->CanGrow(false);
 		_pool->Send([this] {
-			boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
-			lock_t lock(_mutex);
-			_cnd.wait(lock, [this] { 
-				return _running == false && _counter.load() == 0; 
-			});
+			try {
+				boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
+				lock_t lock(_mutex);
+				_cnd.wait(lock, [this] { 
+					return _running == false && _counter.load() == 0; 
+				});
+				std::cout << "Work terminated" << std::endl;
+			} catch (const std::exception& e) {
+				std::cerr << e.what() << std::endl;
+			}
 		}, num);
 		
 	}

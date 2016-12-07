@@ -99,7 +99,7 @@ TEST_CASE("TestFiberProc") {
 
 
 	REQUIRE(fiber.ThreadNum() == 4);
-	REQUIRE(fiber.Active() !=  0);
+	REQUIRE(fiber.Active() != 0);
 	fiber.Close();
 	REQUIRE(fiber.Active() ==  0);
 
