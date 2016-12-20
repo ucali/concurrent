@@ -115,6 +115,25 @@ public:
 
     static Host::Ptr WithPlatform(Platform p) {
         Host::Ptr host(nullptr);
+
+        std::string key;
+        switch (p) {
+            case AMD: {
+                key = "amd";
+                break;
+            }
+            case INTEL: {
+                key = "intel";
+                break;
+            }
+            case NVIDIA: {
+                key = "nvidia";
+                break;
+            }
+            default: {
+                return host;
+            }
+        }
         
         auto platforms = boost::compute::system::platforms();
         for (const auto& platform : platforms) {
@@ -124,28 +143,9 @@ public:
             auto vendor = platform.vendor();
             std::transform(vendor.begin(), vendor.end(), vendor.begin(), ::tolower);
 
-            switch (p) {
-                case AMD: {
-                    if (name.find("amd") != std::string::npos || vendor.find("amd") != std::string::npos) {
-                        host.reset(new Host(p, platform));
-                        return host;
-                    }
-                    break;
-                }
-                case INTEL: {
-                    if (name.find("intel") != std::string::npos || vendor.find("intel") != std::string::npos) {
-                        host.reset(new Host(p, platform));
-                        return host;
-                    }
-                    break;
-                }
-                case NVIDIA: {
-                    if (name.find("nvidia") != std::string::npos || vendor.find("nvidia") != std::string::npos) {
-                        host.reset(new Host(p, platform));
-                        return host;
-                    }
-                    break;
-                }
+            if (name.find(key) != std::string::npos || vendor.find(key) != std::string::npos) {
+                host.reset(new Host(p, platform));
+                break;
             }
         }
         return host;

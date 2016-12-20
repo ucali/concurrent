@@ -279,10 +279,12 @@ TEST_CASE("TestSharedBridge") {
     cl::SharedComputeBridge bridge(cl::Host::AMD);
     bridge.ComputeOnGPU([] (auto& context, auto& queue) {
         kmeans(context, queue);
+        queue.finish();
         std::cout << "GPU DONE" << std::endl;
     });
     bridge.ComputeOnCPU([] (auto& context, auto& queue) {
         kmeans(context, queue);
+        queue.finish();
         std::cout << "CPU DONE" << std::endl;
     });
     bridge.Close();
@@ -294,10 +296,12 @@ TEST_CASE("TestIndipendentBridge") {
     cl::IndipendentComputeBridge bridge(cl::Host::AMD);
     bridge.ComputeOnGPU([] (auto& context, auto& queue) {
         kmeans(context, queue);
+        queue.finish();
         std::cout << "GPU DONE" << std::endl;
     });
     bridge.ComputeOnCPU([] (auto& context, auto& queue) {
         kmeans(context, queue);
+        queue.finish();
         std::cout << "CPU DONE" << std::endl;
     });
     bridge.Close();
