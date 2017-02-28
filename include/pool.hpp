@@ -20,7 +20,7 @@ namespace concurrent {
 		public:
 			typedef std::shared_ptr<_Task<R>> Ptr;
 
-			_Task(const std::function<R()>& c) : _c(c) { }
+			_Task(const std::function<R()>& c) : _c(std::move(c)) { }
 
 			virtual void Exec();
 
@@ -50,7 +50,7 @@ namespace concurrent {
 		public:
 			typedef std::shared_ptr<Task<R>> Ptr;
 
-			Task(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) : _Task<R>(c), _t(t) {}
+			Task(const std::function<R()>& c, const typename _func_traits<R>::FuncType& t) : _Task<R>(std::move(c)), _t(std::move(t)) {}
 			Task(const std::function<R()>& c) : _Task<R>(c) { _t = [](R) {}; }
 
 			virtual void Exec();
@@ -141,7 +141,7 @@ namespace concurrent {
 				return; //Throw
 			}
 
-			auto func = std::bind(c, args...);
+			auto func = std::bind(c, std::forward<_Args>(args)...);
 
 			std::unique_lock<std::mutex> lock(_mutex);
 			_threads.emplace_back(func);
@@ -158,7 +158,7 @@ namespace concurrent {
 
 		template <typename ..._Args>
 		void Send(const std::function<void(_Args...)>& c, _Args... args) {
-			auto fun = std::bind(c, args...);
+			auto fun = std::bind(c, std::forward<_Args>(args)...);
 			Task<void>::Ptr ptr(new Task<void>(fun));
 
 			launch(ptr);
@@ -166,7 +166,7 @@ namespace concurrent {
 
 		template <typename ..._Args>
 		void Send(const std::function<R(_Args...)>& c, const typename _func_traits<R>::FuncType& t, _Args... args) {
-			auto fun = std::bind(c, args...);
+			auto fun = std::bind(c, std::forward<_Args>(args)...);
 			typename Task<R>::Ptr ptr(new Task<R>(fun, t));
 
 			launch(ptr);
@@ -179,7 +179,7 @@ namespace concurrent {
 
 		template <typename ..._Args>
 		void Call(_Args... args) {
-			auto fun = std::bind(_c, args...);
+			auto fun = std::bind(_c, std::forward<_Args>(args)...);
 			typename Task<R>::Ptr ptr(new Task<R>(fun));
 
 			launch(ptr);

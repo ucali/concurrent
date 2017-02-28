@@ -5,7 +5,7 @@
 
 
 Header-only library to simplify long running multistep processing and concurrent computation.
-Optional boost dependency for fibers.
+Optional boost dependency for fibers and opencl 1.1+.
 
 Tested with msvc14, gcc5, clang3.7.
 
