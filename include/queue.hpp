@@ -49,6 +49,7 @@ namespace concurrent {
 		bool Push(const T&, uint64_t ms);
 
 		void Push(T&&);
+		void MustPush(T&&);
 		bool Push(T&&, uint64_t ms);
 
 		void WakeAndClose();
@@ -244,6 +245,15 @@ namespace concurrent {
 				_full.wait(lock);
 			}
 
+			_queue.push(std::move(p));
+		}
+		_empty.notify_all();
+	}
+
+	template <typename T>
+	void SyncQueue<T>::MustPush(T&& p) {
+		{
+			std::unique_lock<std::mutex> lock(_mutex);
 			_queue.push(std::move(p));
 		}
 		_empty.notify_all();
