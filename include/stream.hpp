@@ -138,7 +138,7 @@ public:
 						auto val = input->Pop(500);
 						auto ret = fn(val);
 						if (ret) {
-							output->Push(val);
+							output->MustPush(val);
 						}
 					} catch (const ex::TimeoutQueueException&) {
 					} catch (const ex::EmptyQueueException&) {
@@ -171,7 +171,7 @@ public:
 							auto val = input->Pop(500);
 							auto ret = fn(val);
 							if (ret) {
-								output->Push(val);
+								output->MustPush(val);
 							}
 						} catch (const ex::TimeoutQueueException&) {
 						} catch (const ex::EmptyQueueException&) {
@@ -200,7 +200,7 @@ public:
 						auto val = input->Pop(500);
 						auto ret = fn(val);
 						if (ret) {
-							output->Push(val);
+							output->MustPush(val);
 						}
 					} catch (const ex::TimeoutQueueException&) {
 					} catch (const ex::EmptyQueueException&) {
@@ -231,7 +231,7 @@ public:
 
 			input->ForEach([output, item, fn](const typename O::Type& v) {
 				auto o = fn(v);
-				output->Push(o);
+				output->MustPush(o);
 			});
 
 			item->Output()->Close();
@@ -257,7 +257,7 @@ public:
 
 				input->ForEach([output, item, fn] (const typename O::Type& v) {
 					auto o = fn(v);
-					output->Push(o);
+					output->MustPush(o);
 				});
 
 				wg->Finish();
@@ -292,7 +292,7 @@ public:
 			auto output = item->Output();
 
 			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> f = [output, fn](const auto& k, auto s) {
-				output->Push(std::move(fn(k, s)));
+				output->MustPush(std::move(fn(k, s)));
 			};
 
 			input->Aggregate(f);
@@ -315,7 +315,7 @@ public:
 			WaitGroup::Ptr group(new WaitGroup(0));
 
 			std::function<void(const typename O::KeyType&, std::shared_ptr<Storage>)> f = [group, output, fn](const auto& k, auto s) {
-				output->Push(fn(k, s));
+				output->MustPush(fn(k, s));
 				group->Finish();
 			};
 
@@ -368,7 +368,7 @@ public:
 	template <typename C>
 	void Stream(const C& c) {
 		for (const auto& item : c) {
-			_in->Push(item);
+			_in->MustPush(item);
 		}
 		_in->Close();
 	}
@@ -376,7 +376,7 @@ public:
 	template <typename Iter>
 	void Stream(Iter b, Iter e) {
 		for (; b != e; b++) {
-			_in->Push(*b);
+			_in->MustPush(*b);
 		}
 		_in->Close();
 	}

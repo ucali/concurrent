@@ -119,8 +119,16 @@ namespace concurrent {
 	public:
 		typedef std::shared_ptr<Pool<R, Args...>> Ptr;
 
-		explicit Pool(size_t s = std::thread::hardware_concurrency()) { init(s); }
-		explicit Pool(const std::function<R(Args...)>& c, size_t s = std::thread::hardware_concurrency()) : _c(c) { init(s); }
+		
+		explicit Pool(
+			size_t s = std::thread::hardware_concurrency(),
+			bool canGrow = false
+		) : _canGrow{canGrow} { init(s); }
+
+		explicit Pool(
+			const std::function<R(Args...)>& c, 
+			size_t s = std::thread::hardware_concurrency(),
+			bool canGrow = false) : Pool(s, canGrow) { _c = c; }
 
 		~Pool() { Close(); }
 
@@ -236,7 +244,7 @@ namespace concurrent {
 
 		bool isAlmostFull() {
 			std::unique_lock<std::mutex> lock(_mutex);
-			return _threads.size() - _counter <= 2;
+			return _threads.size() - _counter < 2;
 		}
 
 		void launch(typename Task<R>::Ptr ptr) {
@@ -274,7 +282,7 @@ namespace concurrent {
 		std::vector<std::thread> _threads;
 
 		std::atomic_bool _guard{true};
-		std::atomic_bool _canGrow{true};
+		std::atomic_bool _canGrow{false};
 		std::atomic<int>_counter{0};
 
 		mutable std::mutex _mutex;
@@ -283,7 +291,7 @@ namespace concurrent {
 		Pool(Pool const&) = delete;
 		Pool& operator=(Pool const&) = delete;
 
-		const std::function<R(Args...)> _c;
+		std::function<R(Args...)> _c;
 		const typename _func_traits<R>::FuncType _t;
 		std::function<void(const std::exception&)> _ee;
 	};
