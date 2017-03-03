@@ -121,14 +121,13 @@ namespace concurrent {
 
 		
 		explicit Pool(
-			size_t s = std::thread::hardware_concurrency(),
-			bool canGrow = false
-		) : _canGrow{canGrow} { init(s); }
+			size_t s = std::thread::hardware_concurrency()
+		) : _initialPoolSize(s) { init(s); }
 
 		explicit Pool(
 			const std::function<R(Args...)>& c, 
-			size_t s = std::thread::hardware_concurrency(),
-			bool canGrow = false) : Pool(s, canGrow) { _c = c; }
+			size_t s = std::thread::hardware_concurrency()
+		) : Pool(s) { _c = c; }
 
 		~Pool() { Close(); }
 
@@ -281,12 +280,14 @@ namespace concurrent {
 		SyncQueue<std::shared_ptr<_Task<R>>> _msgQ;
 		std::vector<std::thread> _threads;
 
+		const size_t _initialPoolSize;
+
 		std::atomic_bool _guard{true};
-		std::atomic_bool _canGrow{false};
 		std::atomic<int>_counter{0};
+		
+		std::atomic_bool _canGrow{false};
 
 		mutable std::mutex _mutex;
-
 
 		Pool(Pool const&) = delete;
 		Pool& operator=(Pool const&) = delete;
