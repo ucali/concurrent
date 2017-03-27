@@ -5,7 +5,7 @@ mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
 
 function install_boost {
   BOOST_LIBRARIES="fiber,context"
-  BOOST_VERSION="1.63.0"
+  BOOST_VERSION="1.62.0"
   BOOST_URL="https://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/boost_${BOOST_VERSION//\./_}.tar.gz"
   BOOST_DIR="${DEPS_DIR}/boost"
   echo "Downloading Boost ${BOOST_VERSION} from ${BOOST_URL}"
