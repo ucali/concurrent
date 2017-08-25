@@ -133,9 +133,7 @@ std::function<double (int, std::string)> fun = [] (int a, std::string b) {
     return a*2.0f;
 };
 
-std::function<void (double)> cb = [] (double a) {
-    assert(a == 2.0f);
-};
+std::function<void (double)> cb = [] (double a) {};
 
 for (int i = 0; i < 10; i++) {
     pool.Send<int, std::string>(fun, cb, 1, std::string("test"));
