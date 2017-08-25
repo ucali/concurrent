@@ -45,9 +45,11 @@ namespace concurrent {
 		T PopNoThrow(uint64_t ms);
 
 		void Push(const T&);
+		void MustPush(const T&);
 		bool Push(const T&, uint64_t ms);
 
 		void Push(T&&);
+		void MustPush(T&&);
 		bool Push(T&&, uint64_t ms);
 
 		void WakeAndClose();
@@ -88,7 +90,7 @@ namespace concurrent {
 
 		void ForEach(const std::function<void(const Type&)>& fn) {
 			while (CanReceive()) {
-				fn(Pop());
+				fn(std::move(Pop()));
 			}
 		}
 
@@ -211,6 +213,15 @@ namespace concurrent {
 	}
 
 	template <typename T>
+	void SyncQueue<T>::MustPush(const T& p) {
+		{
+			std::unique_lock<std::mutex> lock(_mutex);
+			_queue.push(std::move(p));
+		}
+		_empty.notify_all();
+	}
+
+	template <typename T>
 	bool SyncQueue<T>::Push(const T& p, uint64_t ms) {
 		{
 			std::unique_lock<std::mutex> lock(_mutex);
@@ -234,6 +245,15 @@ namespace concurrent {
 				_full.wait(lock);
 			}
 
+			_queue.push(std::move(p));
+		}
+		_empty.notify_all();
+	}
+
+	template <typename T>
+	void SyncQueue<T>::MustPush(T&& p) {
+		{
+			std::unique_lock<std::mutex> lock(_mutex);
 			_queue.push(std::move(p));
 		}
 		_empty.notify_all();

@@ -16,56 +16,14 @@ namespace concurrent {
 class FiberScheduler {
 public:
 
-	FiberScheduler(size_t num = 1) {
-		boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
+	FiberScheduler(size_t num = 1);
+	~FiberScheduler() { Close(); }
 
-		_pool = Pool<>::Ptr(new Pool<>(num));
-		_pool->CanGrow(false);
-		_pool->Send([this] {
-			try {
-				boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
-				lock_t lock(_mutex);
-				_cnd.wait(lock, [this] { 
-					return _running == false && _counter.load() == 0; 
-				});
-			} catch (const std::exception& e) {
-				std::cerr << e.what() << std::endl;
-			}
-		}, num);
-		
-	}
+	void Run(const std::function<void()>& fun);
+	void Close();
 
-	size_t ThreadNum() {
-		return _pool->Size();
-	}
-
-	void Run(const std::function<void()>& fun) {
-		_counter.fetch_add(1);
-		typename Task<void>::Ptr ptr(new Task<void>(fun, [this] {
-			_counter.fetch_sub(1);
-			_cnd.notify_all();
-		}));
-			
-		boost::fibers::fiber([ptr] {
-			ptr->Exec();
-		}).detach();
-	}
-
-	void Close() {
-		_running.store(false);
-		if (_pool->IsRunning()) {
-			_cnd.notify_all();
-
-			_pool->Close();
-		}
-	}
-
-	int Active() const { return _counter.load(); }
-
-
-	~FiberScheduler() {
-		Close();
-	}
+	inline size_t ThreadNum() { return _pool->Size(); }
+	inline int Active() const { return _counter.load(); }
 
 private:
 	std::atomic_bool _running{ true };
@@ -81,6 +39,46 @@ private:
 	FiberScheduler(FiberScheduler const&) = delete;
 	FiberScheduler& operator=(FiberScheduler const&) = delete;
 };
+
+FiberScheduler::FiberScheduler(size_t num) {
+	boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>(); 
+
+	_pool = Pool<>::Ptr(new Pool<>(num));
+	_pool->CanGrow(false);
+	_pool->Send([this] {
+		try {
+			boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
+			lock_t lock(_mutex);
+			_cnd.wait(lock, [this] { 
+				return _running == false && _counter.load() == 0; 
+			});
+		} catch (const std::exception& e) {
+			std::cerr << e.what() << std::endl;
+		}
+	}, num);
+	
+}
+
+void FiberScheduler::Run(const std::function<void()>& fun) {
+	_counter.fetch_add(1);
+	typename Task<void>::Ptr ptr(new Task<void>(fun, [this] {
+		_counter.fetch_sub(1);
+		_cnd.notify_all();
+	}));
+		
+	boost::fibers::fiber([ptr] {
+		ptr->Exec();
+	}).detach();
+}
+
+void FiberScheduler::Close() {
+	_running.store(false);
+	if (_pool->IsRunning()) {
+		_cnd.notify_all();
+
+		_pool->Close();
+	}
+}
 
 }
 
